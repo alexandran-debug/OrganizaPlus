@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "TaskFlow",
-    "slug": "TaskFlow",
+    "name": "Organiza+",
+    "slug": "organiza-plus",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "taskflow",
+    "scheme": "organizaplus",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
