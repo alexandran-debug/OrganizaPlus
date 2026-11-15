@@ -32,7 +32,22 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir que Organiza+ utilice la cámara para fotografiar tus tareas.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permitir que Organiza+ acceda a tu ubicación al crear una tarea."
+        }
+      ],
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

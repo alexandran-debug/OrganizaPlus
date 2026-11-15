@@ -79,7 +79,7 @@ export default function ProgresoScreen() {
       contentContainerStyle={styles.contenido}
     >
       <View style={styles.encabezado}>
-        <Text style={styles.marca}>TASKFLOW</Text>
+        <Text style={styles.marca}>ORGANIZA+</Text>
         <Text style={styles.tituloPrincipal}>Mi progreso</Text>
         <Text style={styles.subtitulo}>
           Cada tarea completada es un paso adelante.
@@ -145,7 +145,7 @@ export default function ProgresoScreen() {
       </View>
 
       <View style={styles.pie}>
-        <Text style={styles.textoPie}>TASKFLOW · Un paso a la vez.</Text>
+        <Text style={styles.textoPie}>ORGANIZA+ · Un paso a la vez.</Text>
       </View>
     </ScrollView>
   );

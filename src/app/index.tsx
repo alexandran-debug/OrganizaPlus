@@ -160,7 +160,7 @@ export default function HomeScreen() {
       >
         <View style={styles.encabezado}>
           <View>
-            <Text style={styles.marca}>TASKFLOW</Text>
+            <Text style={styles.marca}>ORGANIZA+</Text>
             <Text style={styles.tituloPrincipal}>Organiza tu día.</Text>
             <Text style={styles.subtitulo}>
               Pequeños pasos, grandes logros.
@@ -385,7 +385,7 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.pie}>
-          <Text style={styles.textoPie}>TASKFLOW · Un paso a la vez.</Text>
+          <Text style={styles.textoPie}>ORGANIZA+ · Un paso a la vez.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
