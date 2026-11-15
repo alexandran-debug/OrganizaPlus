@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,11 +13,14 @@ import {
   View,
 } from "react-native";
 
+import CamaraTarea from "@/components/camara-tarea";
+
 type Tarea = {
   id: string;
   titulo: string;
   descripcion: string;
   completada: boolean;
+  imagenUri?: string | null;
 };
 
 const CLAVE_ALMACENAMIENTO = "@taskflow/tareas";
@@ -27,11 +31,16 @@ export default function HomeScreen() {
   const [descripcion, setDescripcion] = useState("");
   const [tareaEditando, setTareaEditando] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarCamara, setMostrarCamara] = useState(false);
+  const [imagenUri, setImagenUri] = useState<string | null>(null);
+
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "completadas">(
     "todas",
   );
+
   const [cargando, setCargando] = useState(true);
 
+  // Cargar las tareas guardadas en el dispositivo.
   useEffect(() => {
     async function cargarTareas() {
       try {
@@ -51,6 +60,7 @@ export default function HomeScreen() {
     cargarTareas();
   }, []);
 
+  // Guardar automáticamente los cambios en las tareas.
   useEffect(() => {
     if (cargando) return;
 
@@ -71,19 +81,23 @@ export default function HomeScreen() {
   const pendientes = tareas.filter((tarea) => !tarea.completada).length;
   const completadas = tareas.filter((tarea) => tarea.completada).length;
 
+  // Aplicar el filtro seleccionado.
   const tareasFiltradas = tareas.filter((tarea) => {
     if (filtro === "pendientes") return !tarea.completada;
     if (filtro === "completadas") return tarea.completada;
     return true;
   });
 
+  // Limpiar el formulario.
   function limpiarFormulario() {
     setTitulo("");
     setDescripcion("");
+    setImagenUri(null);
     setTareaEditando(null);
     setMostrarFormulario(false);
   }
 
+  // Crear una tarea o guardar sus modificaciones.
   function guardarTarea() {
     if (!titulo.trim()) {
       Alert.alert("Falta el título", "Escribe un título para la tarea.");
@@ -98,6 +112,7 @@ export default function HomeScreen() {
                 ...tarea,
                 titulo: titulo.trim(),
                 descripcion: descripcion.trim(),
+                imagenUri,
               }
             : tarea,
         ),
@@ -108,6 +123,7 @@ export default function HomeScreen() {
         titulo: titulo.trim(),
         descripcion: descripcion.trim(),
         completada: false,
+        imagenUri,
       };
 
       setTareas((anteriores) => [nuevaTarea, ...anteriores]);
@@ -116,13 +132,16 @@ export default function HomeScreen() {
     limpiarFormulario();
   }
 
+  // Cargar los datos de una tarea para editarla.
   function editarTarea(tarea: Tarea) {
     setTitulo(tarea.titulo);
     setDescripcion(tarea.descripcion);
+    setImagenUri(tarea.imagenUri ?? null);
     setTareaEditando(tarea.id);
     setMostrarFormulario(true);
   }
 
+  // Eliminar una tarea.
   function eliminarTarea(id: string) {
     Alert.alert(
       "Eliminar tarea",
@@ -141,6 +160,7 @@ export default function HomeScreen() {
     );
   }
 
+  // Cambiar entre pendiente y completada.
   function cambiarEstado(id: string) {
     setTareas((anteriores) =>
       anteriores.map((tarea) =>
@@ -158,6 +178,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contenido}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Encabezado */}
         <View style={styles.encabezado}>
           <View>
             <Text style={styles.marca}>ORGANIZA+</Text>
@@ -166,26 +187,31 @@ export default function HomeScreen() {
               Pequeños pasos, grandes logros.
             </Text>
           </View>
+
           <View style={styles.iconoEncabezado}>
             <Text style={styles.iconoTexto}>✓</Text>
           </View>
         </View>
 
+        {/* Resumen de tareas */}
         <View style={styles.resumen}>
           <View style={styles.tarjetaResumen}>
             <Text style={styles.numeroResumen}>{tareas.length}</Text>
             <Text style={styles.textoResumen}>Total</Text>
           </View>
+
           <View style={styles.tarjetaResumen}>
             <Text style={styles.numeroResumen}>{pendientes}</Text>
             <Text style={styles.textoResumen}>Pendientes</Text>
           </View>
+
           <View style={styles.tarjetaResumen}>
             <Text style={styles.numeroResumen}>{completadas}</Text>
             <Text style={styles.textoResumen}>Completadas</Text>
           </View>
         </View>
 
+        {/* Encabezado de la lista */}
         <View style={styles.tituloSeccion}>
           <View style={styles.encabezadoLista}>
             <Text style={styles.tituloLista}>Mis tareas</Text>
@@ -193,6 +219,7 @@ export default function HomeScreen() {
               Mantén tus actividades bajo control.
             </Text>
           </View>
+
           <Pressable
             style={styles.botonAgregar}
             onPress={() => {
@@ -204,6 +231,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        {/* Formulario de creación y edición */}
         {mostrarFormulario && (
           <View style={styles.formulario}>
             <Text style={styles.tituloFormulario}>
@@ -211,6 +239,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.etiqueta}>Título *</Text>
+
             <TextInput
               style={styles.campo}
               placeholder="Ej. Estudiar programación"
@@ -222,6 +251,7 @@ export default function HomeScreen() {
             />
 
             <Text style={styles.etiqueta}>Descripción</Text>
+
             <TextInput
               style={[styles.campo, styles.campoDescripcion]}
               placeholder="Agrega algunos detalles..."
@@ -233,6 +263,34 @@ export default function HomeScreen() {
               accessibilityLabel="Descripción de la tarea"
             />
 
+            {/* Botón para abrir la cámara */}
+            <Pressable
+              style={styles.botonFotografia}
+              onPress={() => setMostrarCamara(true)}
+            >
+              <Text style={styles.textoBotonFotografia}>
+                {imagenUri ? "Cambiar fotografía" : "+ Tomar fotografía"}
+              </Text>
+            </Pressable>
+
+            {/* Vista previa de la fotografía */}
+            {imagenUri && (
+              <View style={styles.contenedorImagen}>
+                <Image
+                  source={{ uri: imagenUri }}
+                  style={styles.imagenTarea}
+                  resizeMode="cover"
+                />
+
+                <Pressable onPress={() => setImagenUri(null)}>
+                  <Text style={styles.textoEliminarImagen}>
+                    Quitar fotografía
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Botones del formulario */}
             <View style={styles.botonesFormulario}>
               <Pressable
                 style={styles.botonCancelar}
@@ -240,6 +298,7 @@ export default function HomeScreen() {
               >
                 <Text style={styles.textoCancelar}>Cancelar</Text>
               </Pressable>
+
               <Pressable style={styles.botonGuardar} onPress={guardarTarea}>
                 <Text style={styles.textoGuardar}>
                   {tareaEditando ? "Guardar cambios" : "Crear tarea"}
@@ -249,6 +308,7 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Filtros */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -284,6 +344,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Estados de la lista */}
         {cargando ? (
           <View style={styles.estadoVacio}>
             <Text style={styles.tituloVacio}>Cargando tus tareas...</Text>
@@ -293,6 +354,7 @@ export default function HomeScreen() {
             <View style={styles.iconoVacio}>
               <Text style={styles.iconoVacioTexto}>✓</Text>
             </View>
+
             <Text style={styles.tituloVacio}>
               {filtro === "completadas"
                 ? "Aún no hay tareas completadas"
@@ -300,11 +362,13 @@ export default function HomeScreen() {
                   ? "¡No tienes tareas pendientes!"
                   : "Comienza con tu primera tarea"}
             </Text>
+
             <Text style={styles.textoVacio}>
               {filtro === "todas"
                 ? "Agrega una tarea y empieza a organizar tu día."
                 : "Cuando tengas tareas en esta categoría, aparecerán aquí."}
             </Text>
+
             {filtro === "todas" && (
               <Pressable
                 style={styles.botonVacio}
@@ -317,6 +381,7 @@ export default function HomeScreen() {
             )}
           </View>
         ) : (
+          /* Lista de tareas */
           <View style={styles.listaTareas}>
             {tareasFiltradas.map((tarea) => (
               <View key={tarea.id} style={styles.tarjetaTarea}>
@@ -346,11 +411,22 @@ export default function HomeScreen() {
                   >
                     {tarea.titulo}
                   </Text>
+
                   {tarea.descripcion ? (
                     <Text style={styles.descripcionTarea}>
                       {tarea.descripcion}
                     </Text>
                   ) : null}
+
+                  {/* Fotografía guardada */}
+                  {tarea.imagenUri && (
+                    <Image
+                      source={{ uri: tarea.imagenUri }}
+                      style={styles.imagenTarjeta}
+                      resizeMode="cover"
+                    />
+                  )}
+
                   <Text
                     style={[
                       styles.estadoTarea,
@@ -371,6 +447,7 @@ export default function HomeScreen() {
                   >
                     <Text style={styles.textoEditar}>Editar</Text>
                   </Pressable>
+
                   <Pressable
                     style={styles.botonAccion}
                     onPress={() => eliminarTarea(tarea.id)}
@@ -384,16 +461,28 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Pie de página */}
         <View style={styles.pie}>
           <Text style={styles.textoPie}>ORGANIZA+ · Un paso a la vez.</Text>
         </View>
       </ScrollView>
+
+      {/* Componente de cámara */}
+      <CamaraTarea
+        visible={mostrarCamara}
+        onClose={() => setMostrarCamara(false)}
+        onPhotoCaptured={(uri) => setImagenUri(uri)}
+      />
     </KeyboardAvoidingView>
   );
 }
 
+// Estilos de la aplicación.
 const styles = StyleSheet.create({
-  contenedor: { flex: 1, backgroundColor: "#F5F7FB" },
+  contenedor: {
+    flex: 1,
+    backgroundColor: "#F5F7FB",
+  },
   contenido: {
     width: "100%",
     maxWidth: 850,
@@ -415,8 +504,16 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: 10,
   },
-  tituloPrincipal: { color: "#20263A", fontSize: 30, fontWeight: "800" },
-  subtitulo: { color: "#747D91", fontSize: 14, marginTop: 7 },
+  tituloPrincipal: {
+    color: "#20263A",
+    fontSize: 30,
+    fontWeight: "800",
+  },
+  subtitulo: {
+    color: "#747D91",
+    fontSize: 14,
+    marginTop: 7,
+  },
   iconoEncabezado: {
     width: 52,
     height: 52,
@@ -425,8 +522,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconoTexto: { color: "#FFFFFF", fontSize: 28, fontWeight: "700" },
-  resumen: { flexDirection: "row", gap: 12, marginBottom: 32 },
+  iconoTexto: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  resumen: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 32,
+  },
   tarjetaResumen: {
     flex: 1,
     minWidth: 0,
@@ -456,16 +561,30 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 18,
   },
-  encabezadoLista: { flex: 1 },
-  tituloLista: { color: "#242A3D", fontSize: 22, fontWeight: "800" },
-  descripcionSeccion: { color: "#858DA0", fontSize: 12, marginTop: 5 },
+  encabezadoLista: {
+    flex: 1,
+  },
+  tituloLista: {
+    color: "#242A3D",
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  descripcionSeccion: {
+    color: "#858DA0",
+    fontSize: 12,
+    marginTop: 5,
+  },
   botonAgregar: {
     backgroundColor: "#5965D9",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
   },
-  textoBotonAgregar: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  textoBotonAgregar: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
   formulario: {
     backgroundColor: "#FFFFFF",
     borderRadius: 17,
@@ -497,7 +616,45 @@ const styles = StyleSheet.create({
     marginBottom: 17,
     backgroundColor: "#FCFCFE",
   },
-  campoDescripcion: { minHeight: 90, textAlignVertical: "top" },
+  campoDescripcion: {
+    minHeight: 90,
+    textAlignVertical: "top",
+  },
+  botonFotografia: {
+    backgroundColor: "#EEF0FF",
+    borderRadius: 11,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  textoBotonFotografia: {
+    color: "#5965D9",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  contenedorImagen: {
+    alignItems: "center",
+    marginBottom: 18,
+    gap: 9,
+  },
+  imagenTarea: {
+    width: 180,
+    height: 150,
+    borderRadius: 12,
+  },
+  textoEliminarImagen: {
+    color: "#D65C68",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  imagenTarjeta: {
+    width: "100%",
+    height: 150,
+    borderRadius: 10,
+    marginTop: 10,
+    maxWidth: 250,
+  },
   botonesFormulario: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -510,16 +667,29 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#F0F2F8",
   },
-  textoCancelar: { color: "#606A80", fontSize: 13, fontWeight: "700" },
+  textoCancelar: {
+    color: "#606A80",
+    fontSize: 13,
+    fontWeight: "700",
+  },
   botonGuardar: {
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: "#5965D9",
   },
-  textoGuardar: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  filtros: { marginBottom: 18, flexGrow: 0 },
-  contenidoFiltros: { gap: 9 },
+  textoGuardar: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  filtros: {
+    marginBottom: 18,
+    flexGrow: 0,
+  },
+  contenidoFiltros: {
+    gap: 9,
+  },
   botonFiltro: {
     paddingVertical: 10,
     paddingHorizontal: 17,
@@ -528,9 +698,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E6E9F2",
   },
-  botonFiltroActivo: { backgroundColor: "#E8EAFE", borderColor: "#D5D9FF" },
-  textoFiltro: { color: "#737C90", fontSize: 13, fontWeight: "600" },
-  textoFiltroActivo: { color: "#505BD0", fontWeight: "800" },
+  botonFiltroActivo: {
+    backgroundColor: "#E8EAFE",
+    borderColor: "#D5D9FF",
+  },
+  textoFiltro: {
+    color: "#737C90",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  textoFiltroActivo: {
+    color: "#505BD0",
+    fontWeight: "800",
+  },
   estadoVacio: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -549,7 +729,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 17,
   },
-  iconoVacioTexto: { color: "#5965D9", fontSize: 29, fontWeight: "800" },
+  iconoVacioTexto: {
+    color: "#5965D9",
+    fontSize: 29,
+    fontWeight: "800",
+  },
   tituloVacio: {
     color: "#343B50",
     fontSize: 17,
@@ -571,8 +755,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginTop: 20,
   },
-  textoBotonVacio: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
-  listaTareas: { gap: 13 },
+  textoBotonVacio: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  listaTareas: {
+    gap: 13,
+  },
   tarjetaTarea: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -593,16 +783,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 1,
   },
-  checkboxActivo: { backgroundColor: "#5965D9", borderColor: "#5965D9" },
-  marcaCheckbox: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
-  informacionTarea: { flex: 1, minWidth: 0 },
+  checkboxActivo: {
+    backgroundColor: "#5965D9",
+    borderColor: "#5965D9",
+  },
+  marcaCheckbox: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  informacionTarea: {
+    flex: 1,
+    minWidth: 0,
+  },
   tituloTarea: {
     color: "#30364B",
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21,
   },
-  tareaTerminada: { color: "#969DAE", textDecorationLine: "line-through" },
+  tareaTerminada: {
+    color: "#969DAE",
+    textDecorationLine: "line-through",
+  },
   descripcionTarea: {
     color: "#81899B",
     fontSize: 13,
@@ -615,12 +818,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginTop: 11,
   },
-  estadoPendiente: { color: "#C18431" },
-  estadoCompletada: { color: "#319A78" },
-  accionesTarea: { alignItems: "flex-end", gap: 12 },
-  botonAccion: { paddingVertical: 3, paddingHorizontal: 2 },
-  textoEditar: { color: "#5965D9", fontSize: 12, fontWeight: "700" },
-  textoEliminar: { color: "#D65C68", fontSize: 12, fontWeight: "700" },
+  estadoPendiente: {
+    color: "#C18431",
+  },
+  estadoCompletada: {
+    color: "#319A78",
+  },
+  accionesTarea: {
+    alignItems: "flex-end",
+    gap: 12,
+  },
+  botonAccion: {
+    paddingVertical: 3,
+    paddingHorizontal: 2,
+  },
+  textoEditar: {
+    color: "#5965D9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  textoEliminar: {
+    color: "#D65C68",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   pie: {
     alignItems: "center",
     marginTop: 35,
@@ -628,5 +849,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E9F1",
   },
-  textoPie: { color: "#969DAE", fontSize: 11, letterSpacing: 1 },
+  textoPie: {
+    color: "#969DAE",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
 });
