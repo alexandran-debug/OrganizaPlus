@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -15,12 +16,18 @@ import {
 
 import CamaraTarea from "@/components/camara-tarea";
 
+type Ubicacion = {
+  latitude: number;
+  longitude: number;
+};
+
 type Tarea = {
   id: string;
   titulo: string;
   descripcion: string;
   completada: boolean;
   imagenUri?: string | null;
+  ubicacion?: Ubicacion | null;
 };
 
 const CLAVE_ALMACENAMIENTO = "@taskflow/tareas";
@@ -98,12 +105,13 @@ export default function HomeScreen() {
   }
 
   // Crear una tarea o guardar sus modificaciones.
-  function guardarTarea() {
+  async function guardarTarea() {
     if (!titulo.trim()) {
       Alert.alert("Falta el título", "Escribe un título para la tarea.");
       return;
     }
 
+    // Al editar, conservamos la ubicación que ya tenía la tarea.
     if (tareaEditando) {
       setTareas((anteriores) =>
         anteriores.map((tarea) =>
@@ -117,16 +125,48 @@ export default function HomeScreen() {
             : tarea,
         ),
       );
-    } else {
-      const nuevaTarea: Tarea = {
-        id: Date.now().toString(),
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim(),
-        completada: false,
-        imagenUri,
-      };
 
-      setTareas((anteriores) => [nuevaTarea, ...anteriores]);
+      limpiarFormulario();
+      return;
+    }
+
+    // Al crear una tarea nueva, intentamos obtener la ubicación.
+    let ubicacion: Ubicacion | null = null;
+
+    try {
+      const permiso = await Location.requestForegroundPermissionsAsync();
+
+      if (permiso.granted) {
+        const posicion = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        ubicacion = {
+          latitude: posicion.coords.latitude,
+          longitude: posicion.coords.longitude,
+        };
+      }
+    } catch (error) {
+      console.error("No se pudo obtener la ubicación:", error);
+    }
+
+    // La tarea se guarda aunque no se haya obtenido la ubicación.
+    const nuevaTarea: Tarea = {
+      id: Date.now().toString(),
+      titulo: titulo.trim(),
+      descripcion: descripcion.trim(),
+      completada: false,
+      imagenUri,
+      ubicacion,
+    };
+
+    setTareas((anteriores) => [nuevaTarea, ...anteriores]);
+
+    if (!ubicacion) {
+      Alert.alert(
+        "Tarea guardada",
+        "La tarea se guardó, pero no fue posible registrar su ubicación.",
+      );
     }
 
     limpiarFormulario();
@@ -418,6 +458,23 @@ export default function HomeScreen() {
                     </Text>
                   ) : null}
 
+                  {/* Ubicación GPS guardada */}
+                  {tarea.ubicacion && (
+                    <View style={styles.contenedorUbicacion}>
+                      <Text style={styles.textoUbicacion}>
+                        📍 Ubicación registrada
+                      </Text>
+
+                      <Text style={styles.coordenadasUbicacion}>
+                        Latitud: {tarea.ubicacion.latitude.toFixed(6)}
+                      </Text>
+
+                      <Text style={styles.coordenadasUbicacion}>
+                        Longitud: {tarea.ubicacion.longitude.toFixed(6)}
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Fotografía guardada */}
                   {tarea.imagenUri && (
                     <Image
@@ -654,6 +711,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10,
     maxWidth: 250,
+  },
+  contenedorUbicacion: {
+    backgroundColor: "#EEF0FF",
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  textoUbicacion: {
+    color: "#5965D9",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+  coordenadasUbicacion: {
+    color: "#606A80",
+    fontSize: 11,
+    marginTop: 2,
   },
   botonesFormulario: {
     flexDirection: "row",
