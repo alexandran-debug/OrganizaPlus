@@ -23,6 +23,7 @@ import {
   eliminarTareaServidor,
   obtenerTareasServidor,
 } from "@/services/tareas";
+import { obtenerTareasExternas } from "@/services/tareas-externas";
 import { obtenerUbicacion } from "@/services/ubicacion";
 
 type Ubicacion = {
@@ -33,6 +34,7 @@ type Ubicacion = {
 type Tarea = {
   id: string;
   serverId?: number | null;
+  externalId?: number;
   titulo: string;
   descripcion: string;
   completada: boolean;
@@ -54,6 +56,7 @@ export default function HomeScreen() {
     "todas",
   );
   const [cargando, setCargando] = useState(true);
+  const [importando, setImportando] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [claveUsuario, setClaveUsuario] = useState<string | null>(null);
 
@@ -500,6 +503,116 @@ export default function HomeScreen() {
     setMostrarFormulario(false);
   }
 
+  // Importar tareas desde una API pública externa.
+  async function importarTareasExternas() {
+    if (importando) return;
+
+    setImportando(true);
+
+    try {
+      console.log("Consultando API externa...");
+
+      const tareasExternas = await obtenerTareasExternas();
+
+      // Identificar las tareas que ya fueron importadas.
+      const idsExternosExistentes = new Set(
+        tareas
+          .map((tarea) => tarea.externalId)
+          .filter((id): id is number => id !== undefined),
+      );
+
+      const tareasNuevas = tareasExternas.filter(
+        (tarea) => !idsExternosExistentes.has(tarea.id),
+      );
+
+      if (tareasNuevas.length === 0) {
+        Alert.alert(
+          "Sin tareas nuevas",
+          "Todas las tareas de esta API ya fueron importadas.",
+        );
+        return;
+      }
+
+      const tareasPreparadas: Tarea[] = [];
+      let sincronizadas = 0;
+
+      // Preparar e intentar guardar cada tarea en Laravel.
+      for (const externa of tareasNuevas) {
+        const nuevaTarea: Tarea = {
+          id: `externa-${externa.id}`,
+          externalId: externa.id,
+          serverId: null,
+          titulo: externa.title,
+          descripcion: "Tarea importada desde JSONPlaceholder.",
+          completada: externa.completed,
+          imagenUri: null,
+          ubicacion: null,
+        };
+
+        if (token) {
+          try {
+            const respuesta = await crearTareaServidor(
+              {
+                titulo: nuevaTarea.titulo,
+                descripcion: nuevaTarea.descripcion,
+                completada: nuevaTarea.completada,
+                ubicacion: null,
+                imagenUri: null,
+              },
+              token,
+            );
+
+            nuevaTarea.serverId = respuesta.task.id;
+            sincronizadas++;
+
+            console.log(
+              "Tarea externa sincronizada con Laravel:",
+              respuesta.task.id,
+            );
+          } catch (error) {
+            console.warn(
+              "La tarea externa quedó pendiente de sincronización:",
+              nuevaTarea.titulo,
+              error,
+            );
+          }
+        }
+
+        tareasPreparadas.push(nuevaTarea);
+      }
+
+      // Incorporar las tareas sin reemplazar las existentes.
+      const resultado = [...tareasPreparadas, ...tareas];
+
+      setTareas(resultado);
+
+      // Guardar inmediatamente las tareas importadas en el teléfono.
+      if (claveUsuario) {
+        await AsyncStorage.setItem(claveUsuario, JSON.stringify(resultado));
+      }
+
+      const pendientesSincronizacion = tareasPreparadas.length - sincronizadas;
+
+      Alert.alert(
+        "Importación completada",
+        `Tareas importadas: ${tareasPreparadas.length}\n` +
+          `Sincronizadas con Laravel: ${sincronizadas}\n` +
+          `Pendientes de sincronización: ${pendientesSincronizacion}`,
+      );
+    } catch (error) {
+      console.error("Error al importar tareas externas:", error);
+
+      Alert.alert(
+        "Error de importación",
+        error instanceof Error
+          ? error.message
+          : "No fue posible consultar la API externa.",
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
   // Cerrar sesión sin eliminar las tareas guardadas.
   function cerrarSesion() {
     Alert.alert(
@@ -846,6 +959,16 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          style={styles.botonImportar}
+          onPress={importarTareasExternas}
+          disabled={importando}
+        >
+          <Text style={styles.textoBotonImportar}>
+            {importando ? "Importando tareas..." : "↓ Importar tareas externas"}
+          </Text>
+        </Pressable>
+
         {mostrarFormulario && (
           <View style={styles.formulario}>
             <Text style={styles.tituloFormulario}>
@@ -1185,6 +1308,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   textoBotonAgregar: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  botonImportar: {
+    backgroundColor: "#EEF0FF",
+    borderWidth: 1,
+    borderColor: "#D5D9FF",
+    borderRadius: 11,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  textoBotonImportar: {
+    color: "#5965D9",
+    fontSize: 13,
+    fontWeight: "700",
+  },
   formulario: {
     backgroundColor: "#FFFFFF",
     borderRadius: 17,
