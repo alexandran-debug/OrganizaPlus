@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import NetInfo from "@react-native-community/netinfo";
+import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -15,6 +17,13 @@ import {
 } from "react-native";
 
 import CamaraTarea from "@/components/camara-tarea";
+import {
+  actualizarTareaServidor,
+  crearTareaServidor,
+  eliminarTareaServidor,
+  obtenerTareasServidor,
+} from "@/services/tareas";
+import { obtenerUbicacion } from "@/services/ubicacion";
 
 type Ubicacion = {
   latitude: number;
@@ -23,6 +32,7 @@ type Ubicacion = {
 
 type Tarea = {
   id: string;
+  serverId?: number | null;
   titulo: string;
   descripcion: string;
   completada: boolean;
@@ -40,62 +50,448 @@ export default function HomeScreen() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [mostrarCamara, setMostrarCamara] = useState(false);
   const [imagenUri, setImagenUri] = useState<string | null>(null);
-
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "completadas">(
     "todas",
   );
-
   const [cargando, setCargando] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [claveUsuario, setClaveUsuario] = useState<string | null>(null);
 
-  // Cargar las tareas guardadas en el dispositivo.
+  // Evita que se ejecuten dos sincronizaciones al mismo tiempo.
+  const sincronizandoRef = useRef(false);
+
+  // Registra si ocurrió una reconexión mientras otra sincronización estaba activa.
+  const reintentoPendienteRef = useRef(false);
+
+  // Permite ejecutar la sincronización desde el listener de conexión.
+  const sincronizarPendientesRef = useRef<
+    ((tokenActual: string, claveActual: string) => Promise<void>) | null
+  >(null);
+
+  // Sincronizar tareas pendientes cuando vuelve internet.
+  sincronizarPendientesRef.current = async (
+    tokenActual: string,
+    claveActual: string,
+  ) => {
+    if (sincronizandoRef.current) {
+      console.log(
+        "Ya hay una sincronización en curso. Se dejará pendiente el reintento.",
+      );
+      reintentoPendienteRef.current = true;
+      return;
+    }
+
+    sincronizandoRef.current = true;
+
+    try {
+      console.log("Reconexión detectada. Iniciando sincronización...");
+
+      // Leer los datos más recientes directamente del almacenamiento.
+      const datosGuardados = await AsyncStorage.getItem(claveActual);
+
+      const tareasLocales: Tarea[] = datosGuardados
+        ? JSON.parse(datosGuardados)
+        : [];
+
+      const claveEliminadas = claveActual.replace(
+        CLAVE_ALMACENAMIENTO,
+        "@taskflow/eliminadas",
+      );
+
+      // Reintentar eliminaciones que quedaron pendientes.
+      const datosEliminadas = await AsyncStorage.getItem(claveEliminadas);
+
+      const eliminadas: number[] = datosEliminadas
+        ? JSON.parse(datosEliminadas)
+        : [];
+
+      const eliminacionesPendientes: number[] = [];
+
+      for (const id of eliminadas) {
+        try {
+          await eliminarTareaServidor(id, tokenActual);
+          console.log("Eliminación pendiente sincronizada:", id);
+        } catch (error) {
+          eliminacionesPendientes.push(id);
+          console.warn("No se pudo reintentar la eliminación:", error);
+        }
+      }
+
+      await AsyncStorage.setItem(
+        claveEliminadas,
+        JSON.stringify(eliminacionesPendientes),
+      );
+
+      const tareasSincronizadas: Tarea[] = [];
+
+      // Enviar las tareas nuevas y actualizar las que ya existen en Laravel.
+      for (const tarea of tareasLocales) {
+        if (tarea.serverId != null) {
+          try {
+            await actualizarTareaServidor(
+              tarea.serverId,
+              {
+                titulo: tarea.titulo,
+                descripcion: tarea.descripcion,
+                completada: tarea.completada,
+                ubicacion: tarea.ubicacion ?? null,
+              },
+              tokenActual,
+            );
+
+            console.log("Tarea actualizada en Laravel:", tarea.serverId);
+
+            tareasSincronizadas.push(tarea);
+          } catch (error) {
+            console.warn(
+              "No se pudo actualizar la tarea. Se conserva localmente:",
+              tarea.titulo,
+              error,
+            );
+
+            tareasSincronizadas.push(tarea);
+          }
+        } else {
+          try {
+            console.log("Enviando tarea pendiente:", tarea.titulo);
+
+            const respuesta = await crearTareaServidor(
+              {
+                titulo: tarea.titulo,
+                descripcion: tarea.descripcion,
+                completada: tarea.completada,
+                ubicacion: tarea.ubicacion ?? null,
+                imagenUri: tarea.imagenUri ?? null,
+              },
+              tokenActual,
+            );
+
+            console.log(
+              "Tarea pendiente sincronizada en Laravel:",
+              respuesta.task.id,
+            );
+
+            tareasSincronizadas.push({
+              ...tarea,
+              serverId: respuesta.task.id,
+            });
+          } catch (error) {
+            console.warn(
+              "La tarea todavía no se pudo sincronizar:",
+              tarea.titulo,
+              error,
+            );
+
+            tareasSincronizadas.push(tarea);
+          }
+        }
+      }
+
+      // Guardar inmediatamente el resultado en el teléfono.
+      await AsyncStorage.setItem(
+        claveActual,
+        JSON.stringify(tareasSincronizadas),
+      );
+
+      setTareas(tareasSincronizadas);
+
+      console.log("Proceso de sincronización finalizado.");
+    } catch (error) {
+      console.error("Error durante la sincronización al reconectar:", error);
+    } finally {
+      sincronizandoRef.current = false;
+
+      // Si llegó otra reconexión durante el proceso, volver a intentarlo.
+      if (reintentoPendienteRef.current) {
+        reintentoPendienteRef.current = false;
+
+        console.log("Hay otro reintento pendiente. Se iniciará nuevamente.");
+
+        void sincronizarPendientesRef.current?.(tokenActual, claveActual);
+      }
+    }
+  };
+
+  // Cargar sesión, tareas locales y tareas del servidor.
   useEffect(() => {
-    async function cargarTareas() {
-      try {
-        const datosGuardados = await AsyncStorage.getItem(CLAVE_ALMACENAMIENTO);
+    let activo = true;
 
-        if (datosGuardados) {
-          const tareasGuardadas: Tarea[] = JSON.parse(datosGuardados);
-          setTareas(tareasGuardadas);
+    async function cargarDatos() {
+      try {
+        const tokenGuardado = await SecureStore.getItemAsync("organiza_token");
+        const usuarioGuardado =
+          await SecureStore.getItemAsync("organiza_usuario");
+
+        if (!tokenGuardado || !usuarioGuardado) {
+          throw new Error("No se encontró una sesión activa.");
+        }
+
+        const usuario = JSON.parse(usuarioGuardado);
+        const usuarioId = Number(usuario.id);
+
+        if (!Number.isFinite(usuarioId)) {
+          throw new Error("No se pudo identificar al usuario.");
+        }
+
+        const claveTareas = `${CLAVE_ALMACENAMIENTO}:${usuarioId}`;
+        const claveEliminadas = `@taskflow/eliminadas:${usuarioId}`;
+
+        setToken(tokenGuardado);
+        setClaveUsuario(claveTareas);
+
+        let datosGuardados = await AsyncStorage.getItem(claveTareas);
+
+        // Recuperar tareas de la versión anterior de la aplicación.
+        if (datosGuardados === null) {
+          const tareasAntiguas =
+            await AsyncStorage.getItem(CLAVE_ALMACENAMIENTO);
+
+          if (tareasAntiguas !== null) {
+            await AsyncStorage.setItem(claveTareas, tareasAntiguas);
+            await AsyncStorage.removeItem(CLAVE_ALMACENAMIENTO);
+            datosGuardados = tareasAntiguas;
+          }
+        }
+
+        const tareasLocales: Tarea[] = datosGuardados
+          ? JSON.parse(datosGuardados)
+          : [];
+
+        if (!activo) return;
+
+        setTareas(tareasLocales);
+        setCargando(false);
+
+        // Evitar que la reconexión inicie otra sincronización en paralelo.
+        sincronizandoRef.current = true;
+
+        try {
+          console.log("Consultando tareas en Laravel...");
+
+          const tareasRemotas = await obtenerTareasServidor(tokenGuardado);
+
+          console.log("Tareas recibidas desde Laravel:", tareasRemotas.length);
+
+          // Reintentar eliminaciones pendientes.
+          const eliminadasGuardadas =
+            await AsyncStorage.getItem(claveEliminadas);
+
+          const eliminadas: number[] = eliminadasGuardadas
+            ? JSON.parse(eliminadasGuardadas)
+            : [];
+
+          const eliminacionesPendientes: number[] = [];
+
+          for (const id of eliminadas) {
+            try {
+              await eliminarTareaServidor(id, tokenGuardado);
+            } catch (error) {
+              eliminacionesPendientes.push(id);
+              console.warn("No se pudo sincronizar una eliminación:", error);
+            }
+          }
+
+          await AsyncStorage.setItem(
+            claveEliminadas,
+            JSON.stringify(eliminacionesPendientes),
+          );
+
+          const idsLocales = new Set(
+            tareasLocales
+              .filter((tarea) => tarea.serverId != null)
+              .map((tarea) => tarea.serverId),
+          );
+
+          const tareasActualizadas: Tarea[] = [];
+
+          // Enviar tareas locales pendientes o actualizar las existentes.
+          for (const tarea of tareasLocales) {
+            if (tarea.serverId != null) {
+              try {
+                await actualizarTareaServidor(
+                  tarea.serverId,
+                  {
+                    titulo: tarea.titulo,
+                    descripcion: tarea.descripcion,
+                    completada: tarea.completada,
+                    ubicacion: tarea.ubicacion ?? null,
+                  },
+                  tokenGuardado,
+                );
+              } catch (error) {
+                console.warn("No se pudo actualizar la tarea:", error);
+              }
+
+              tareasActualizadas.push(tarea);
+            } else {
+              try {
+                const respuesta = await crearTareaServidor(
+                  {
+                    titulo: tarea.titulo,
+                    descripcion: tarea.descripcion,
+                    completada: tarea.completada,
+                    ubicacion: tarea.ubicacion ?? null,
+                    imagenUri: tarea.imagenUri ?? null,
+                  },
+                  tokenGuardado,
+                );
+
+                tareasActualizadas.push({
+                  ...tarea,
+                  serverId: respuesta.task.id,
+                });
+              } catch (error) {
+                tareasActualizadas.push(tarea);
+                console.warn("Tarea pendiente de sincronización:", error);
+              }
+            }
+          }
+
+          // Importar tareas que están en Laravel y no en el teléfono.
+          const tareasImportadas: Tarea[] = tareasRemotas
+            .filter(
+              (tarea) =>
+                !idsLocales.has(tarea.id) &&
+                !eliminacionesPendientes.includes(tarea.id) &&
+                !eliminadas.includes(tarea.id),
+            )
+            .map((tarea) => ({
+              id: `servidor-${tarea.id}`,
+              serverId: tarea.id,
+              titulo: tarea.title,
+              descripcion: tarea.description ?? "",
+              completada: tarea.completed,
+              imagenUri: null,
+              ubicacion:
+                tarea.latitude !== null && tarea.longitude !== null
+                  ? {
+                      latitude: Number(tarea.latitude),
+                      longitude: Number(tarea.longitude),
+                    }
+                  : null,
+            }));
+
+          const resultado = [...tareasActualizadas, ...tareasImportadas];
+
+          if (activo) {
+            // Guardar también la sincronización inicial en el almacenamiento.
+            await AsyncStorage.setItem(claveTareas, JSON.stringify(resultado));
+
+            setTareas(resultado);
+          }
+        } catch (error) {
+          console.error("Error al consultar o sincronizar con Laravel:", error);
+        } finally {
+          sincronizandoRef.current = false;
+
+          // Atender una reconexión que haya ocurrido durante la carga inicial.
+          if (reintentoPendienteRef.current && activo) {
+            reintentoPendienteRef.current = false;
+
+            console.log(
+              "Se detectó una reconexión durante la carga inicial. Reintentando...",
+            );
+
+            void sincronizarPendientesRef.current?.(tokenGuardado, claveTareas);
+          }
         }
       } catch (error) {
-        Alert.alert("Aviso", "No se pudieron cargar las tareas guardadas.");
-      } finally {
-        setCargando(false);
+        console.error("Error al cargar los datos:", error);
+
+        if (activo) {
+          Alert.alert(
+            "Error",
+            error instanceof Error ? error.message : String(error),
+          );
+
+          setCargando(false);
+        }
       }
     }
 
-    cargarTareas();
+    cargarDatos();
+
+    return () => {
+      activo = false;
+    };
   }, []);
 
-  // Guardar automáticamente los cambios en las tareas.
+  // Detectar cuando el dispositivo recupera la conexión a internet.
   useEffect(() => {
-    if (cargando) return;
+    let conexionAnterior: boolean | null = null;
 
-    async function guardarTareas() {
-      try {
-        await AsyncStorage.setItem(
-          CLAVE_ALMACENAMIENTO,
-          JSON.stringify(tareas),
-        );
-      } catch (error) {
-        Alert.alert("Error", "No se pudieron guardar las tareas.");
+    console.log("Iniciando detector de conexión a internet...");
+
+    const cancelarSuscripcion = NetInfo.addEventListener((estado) => {
+      const conectado = estado.isConnected === true;
+
+      console.log("Estado de conexión detectado:", {
+        conectado: estado.isConnected,
+        internetAlcanzable: estado.isInternetReachable,
+      });
+
+      // El primer evento establece el estado inicial.
+      if (conexionAnterior === null) {
+        conexionAnterior = conectado;
+        console.log("Estado inicial de conexión:", conectado);
+        return;
       }
-    }
 
-    guardarTareas();
-  }, [tareas, cargando]);
+      // Detectar cuando se recupera la conexión.
+      if (conexionAnterior === false && conectado === true) {
+        console.log("Se recuperó la conexión a internet.");
+
+        if (!token || !claveUsuario) {
+          console.log(
+            "No hay una sesión disponible para sincronizar las tareas.",
+          );
+        } else if (sincronizandoRef.current) {
+          console.log(
+            "La sincronización inicial sigue activa. Se programará un reintento.",
+          );
+
+          reintentoPendienteRef.current = true;
+        } else {
+          console.log("Iniciando sincronización de tareas pendientes...");
+
+          void sincronizarPendientesRef.current?.(token, claveUsuario);
+        }
+      }
+
+      conexionAnterior = conectado;
+    });
+
+    return () => {
+      cancelarSuscripcion();
+      console.log("Detector de conexión detenido.");
+    };
+  }, [token, claveUsuario]);
+
+  // Guardar automáticamente en el teléfono.
+  useEffect(() => {
+    if (cargando || !claveUsuario) return;
+
+    AsyncStorage.setItem(claveUsuario, JSON.stringify(tareas)).catch(
+      (error) => {
+        console.error("Error al guardar las tareas localmente:", error);
+
+        Alert.alert(
+          "Error",
+          "No se pudieron guardar las tareas en el dispositivo.",
+        );
+      },
+    );
+  }, [tareas, cargando, claveUsuario]);
 
   const pendientes = tareas.filter((tarea) => !tarea.completada).length;
   const completadas = tareas.filter((tarea) => tarea.completada).length;
 
-  // Aplicar el filtro seleccionado.
   const tareasFiltradas = tareas.filter((tarea) => {
     if (filtro === "pendientes") return !tarea.completada;
     if (filtro === "completadas") return tarea.completada;
     return true;
   });
 
-  // Limpiar el formulario.
   function limpiarFormulario() {
     setTitulo("");
     setDescripcion("");
@@ -104,55 +500,100 @@ export default function HomeScreen() {
     setMostrarFormulario(false);
   }
 
-  // Crear una tarea o guardar sus modificaciones.
+  // Cerrar sesión sin eliminar las tareas guardadas.
+  function cerrarSesion() {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás segura de que deseas cerrar tu sesión?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await SecureStore.deleteItemAsync("organiza_token");
+              await SecureStore.deleteItemAsync("organiza_usuario");
+
+              setToken(null);
+              setClaveUsuario(null);
+
+              router.replace("/auth/login");
+            } catch (error) {
+              console.error("Error al cerrar sesión:", error);
+
+              Alert.alert(
+                "Error",
+                "No se pudo cerrar la sesión. Inténtalo nuevamente.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // Crear una tarea o guardar cambios.
   async function guardarTarea() {
     if (!titulo.trim()) {
       Alert.alert("Falta el título", "Escribe un título para la tarea.");
       return;
     }
 
-    // Al editar, conservamos la ubicación que ya tenía la tarea.
+    // Editar una tarea existente.
     if (tareaEditando) {
+      const tareaOriginal = tareas.find((tarea) => tarea.id === tareaEditando);
+
+      const datosActualizados = {
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        imagenUri,
+      };
+
       setTareas((anteriores) =>
         anteriores.map((tarea) =>
           tarea.id === tareaEditando
-            ? {
-                ...tarea,
-                titulo: titulo.trim(),
-                descripcion: descripcion.trim(),
-                imagenUri,
-              }
+            ? { ...tarea, ...datosActualizados }
             : tarea,
         ),
       );
+
+      if (tareaOriginal?.serverId != null && token) {
+        try {
+          await actualizarTareaServidor(
+            tareaOriginal.serverId,
+            {
+              titulo: datosActualizados.titulo,
+              descripcion: datosActualizados.descripcion,
+            },
+            token,
+          );
+
+          console.log("Tarea actualizada en Laravel.");
+        } catch (error) {
+          console.error("Error al actualizar en Laravel:", error);
+
+          Alert.alert(
+            "Sincronización pendiente",
+            "Los cambios quedaron guardados en el teléfono, pero no se pudieron enviar al servidor. Se intentará sincronizarlos cuando vuelva internet.",
+          );
+        }
+      }
 
       limpiarFormulario();
       return;
     }
 
-    // Al crear una tarea nueva, intentamos obtener la ubicación.
-    let ubicacion: Ubicacion | null = null;
+    // Obtener ubicación GPS. Si falla, se puede guardar sin ella.
+    const ubicacion = await obtenerUbicacion();
 
-    try {
-      const permiso = await Location.requestForegroundPermissionsAsync();
-
-      if (permiso.granted) {
-        const posicion = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-
-        ubicacion = {
-          latitude: posicion.coords.latitude,
-          longitude: posicion.coords.longitude,
-        };
-      }
-    } catch (error) {
-      console.error("No se pudo obtener la ubicación:", error);
-    }
-
-    // La tarea se guarda aunque no se haya obtenido la ubicación.
+    // Identificador único para evitar claves duplicadas.
     const nuevaTarea: Tarea = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      serverId: null,
       titulo: titulo.trim(),
       descripcion: descripcion.trim(),
       completada: false,
@@ -160,19 +601,66 @@ export default function HomeScreen() {
       ubicacion,
     };
 
+    // Guardar primero en el dispositivo.
     setTareas((anteriores) => [nuevaTarea, ...anteriores]);
+
+    // Enviar a Laravel.
+    if (!token) {
+      console.error("No hay token de autenticación disponible.");
+
+      Alert.alert(
+        "Sesión no disponible",
+        "La tarea quedó guardada en el teléfono. Inicia sesión nuevamente para sincronizarla.",
+      );
+    } else {
+      try {
+        console.log("Enviando tarea a Laravel...");
+
+        const respuesta = await crearTareaServidor(
+          {
+            titulo: nuevaTarea.titulo,
+            descripcion: nuevaTarea.descripcion,
+            completada: nuevaTarea.completada,
+            ubicacion: nuevaTarea.ubicacion,
+            imagenUri: nuevaTarea.imagenUri ?? null,
+          },
+          token,
+        );
+
+        console.log("Tarea creada en Laravel:", respuesta.task.id);
+
+        setTareas((anteriores) =>
+          anteriores.map((tarea) =>
+            tarea.id === nuevaTarea.id
+              ? { ...tarea, serverId: respuesta.task.id }
+              : tarea,
+          ),
+        );
+
+        Alert.alert(
+          "Tarea sincronizada",
+          "La tarea se guardó en el dispositivo y en Laravel.",
+        );
+      } catch (error) {
+        console.error("ERROR AL SINCRONIZAR CON LARAVEL:", error);
+
+        Alert.alert(
+          "Tarea guardada localmente",
+          "No se pudo enviar a Laravel. Se intentará sincronizar automáticamente cuando vuelva internet.",
+        );
+      }
+    }
 
     if (!ubicacion) {
       Alert.alert(
-        "Tarea guardada",
-        "La tarea se guardó, pero no fue posible registrar su ubicación.",
+        "Ubicación no registrada",
+        "La tarea se guardó, pero no fue posible obtener la ubicación GPS.",
       );
     }
 
     limpiarFormulario();
   }
 
-  // Cargar los datos de una tarea para editarla.
   function editarTarea(tarea: Tarea) {
     setTitulo(tarea.titulo);
     setDescripcion(tarea.descripcion);
@@ -181,7 +669,6 @@ export default function HomeScreen() {
     setMostrarFormulario(true);
   }
 
-  // Eliminar una tarea.
   function eliminarTarea(id: string) {
     Alert.alert(
       "Eliminar tarea",
@@ -191,22 +678,109 @@ export default function HomeScreen() {
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: () =>
+          onPress: async () => {
+            const tarea = tareas.find((item) => item.id === id);
+
             setTareas((anteriores) =>
-              anteriores.filter((tarea) => tarea.id !== id),
-            ),
+              anteriores.filter((item) => item.id !== id),
+            );
+
+            if (tarea?.serverId != null && token && claveUsuario) {
+              try {
+                await eliminarTareaServidor(tarea.serverId, token);
+
+                console.log("Tarea eliminada de Laravel.");
+              } catch (error) {
+                console.error("Error al eliminar en Laravel:", error);
+
+                try {
+                  const claveEliminadas = claveUsuario.replace(
+                    CLAVE_ALMACENAMIENTO,
+                    "@taskflow/eliminadas",
+                  );
+
+                  const datos = await AsyncStorage.getItem(claveEliminadas);
+
+                  const eliminadas: number[] = datos ? JSON.parse(datos) : [];
+
+                  if (!eliminadas.includes(tarea.serverId)) {
+                    eliminadas.push(tarea.serverId);
+                  }
+
+                  await AsyncStorage.setItem(
+                    claveEliminadas,
+                    JSON.stringify(eliminadas),
+                  );
+                } catch (errorAlmacenamiento) {
+                  console.error(
+                    "Error al registrar eliminación pendiente:",
+                    errorAlmacenamiento,
+                  );
+                }
+
+                Alert.alert(
+                  "Eliminación pendiente",
+                  "La tarea se quitó del teléfono. Se intentará eliminar del servidor cuando haya conexión.",
+                );
+              }
+            }
+          },
         },
       ],
     );
   }
 
-  // Cambiar entre pendiente y completada.
-  function cambiarEstado(id: string) {
-    setTareas((anteriores) =>
-      anteriores.map((tarea) =>
-        tarea.id === id ? { ...tarea, completada: !tarea.completada } : tarea,
-      ),
+  // Cambiar el estado y guardarlo localmente antes de sincronizar.
+  async function cambiarEstado(id: string) {
+    const tarea = tareas.find((item) => item.id === id);
+
+    if (!tarea) return;
+
+    const nuevoEstado = !tarea.completada;
+
+    // Preparar la lista con el nuevo estado.
+    const tareasActualizadas = tareas.map((item) =>
+      item.id === id ? { ...item, completada: nuevoEstado } : item,
     );
+
+    // Actualizar inmediatamente la pantalla.
+    setTareas(tareasActualizadas);
+
+    // Guardar el cambio en el teléfono antes de intentar sincronizar.
+    try {
+      if (claveUsuario) {
+        await AsyncStorage.setItem(
+          claveUsuario,
+          JSON.stringify(tareasActualizadas),
+        );
+      }
+    } catch (error) {
+      console.error("Error al guardar el nuevo estado localmente:", error);
+
+      Alert.alert("Error", "No se pudo guardar el cambio en el dispositivo.");
+
+      return;
+    }
+
+    // Enviar el cambio a Laravel si la tarea ya existe en el servidor.
+    if (tarea.serverId != null && token) {
+      try {
+        await actualizarTareaServidor(
+          tarea.serverId,
+          { completada: nuevoEstado },
+          token,
+        );
+
+        console.log("Estado actualizado en Laravel:", nuevoEstado);
+      } catch (error) {
+        console.error("Error al actualizar el estado:", error);
+
+        Alert.alert(
+          "Sincronización pendiente",
+          "El cambio quedó guardado en el teléfono. Se intentará enviar a Laravel cuando vuelva internet.",
+        );
+      }
+    }
   }
 
   return (
@@ -218,7 +792,6 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contenido}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Encabezado */}
         <View style={styles.encabezado}>
           <View>
             <Text style={styles.marca}>ORGANIZA+</Text>
@@ -226,6 +799,10 @@ export default function HomeScreen() {
             <Text style={styles.subtitulo}>
               Pequeños pasos, grandes logros.
             </Text>
+
+            <Pressable style={styles.botonCerrarSesion} onPress={cerrarSesion}>
+              <Text style={styles.textoCerrarSesion}>Cerrar sesión</Text>
+            </Pressable>
           </View>
 
           <View style={styles.iconoEncabezado}>
@@ -233,7 +810,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Resumen de tareas */}
         <View style={styles.resumen}>
           <View style={styles.tarjetaResumen}>
             <Text style={styles.numeroResumen}>{tareas.length}</Text>
@@ -251,7 +827,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Encabezado de la lista */}
         <View style={styles.tituloSeccion}>
           <View style={styles.encabezadoLista}>
             <Text style={styles.tituloLista}>Mis tareas</Text>
@@ -271,7 +846,6 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Formulario de creación y edición */}
         {mostrarFormulario && (
           <View style={styles.formulario}>
             <Text style={styles.tituloFormulario}>
@@ -303,7 +877,6 @@ export default function HomeScreen() {
               accessibilityLabel="Descripción de la tarea"
             />
 
-            {/* Botón para abrir la cámara */}
             <Pressable
               style={styles.botonFotografia}
               onPress={() => setMostrarCamara(true)}
@@ -313,7 +886,6 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
 
-            {/* Vista previa de la fotografía */}
             {imagenUri && (
               <View style={styles.contenedorImagen}>
                 <Image
@@ -330,7 +902,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* Botones del formulario */}
             <View style={styles.botonesFormulario}>
               <Pressable
                 style={styles.botonCancelar}
@@ -348,7 +919,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Filtros */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -384,7 +954,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Estados de la lista */}
         {cargando ? (
           <View style={styles.estadoVacio}>
             <Text style={styles.tituloVacio}>Cargando tus tareas...</Text>
@@ -421,7 +990,6 @@ export default function HomeScreen() {
             )}
           </View>
         ) : (
-          /* Lista de tareas */
           <View style={styles.listaTareas}>
             {tareasFiltradas.map((tarea) => (
               <View key={tarea.id} style={styles.tarjetaTarea}>
@@ -458,7 +1026,6 @@ export default function HomeScreen() {
                     </Text>
                   ) : null}
 
-                  {/* Ubicación GPS guardada */}
                   {tarea.ubicacion && (
                     <View style={styles.contenedorUbicacion}>
                       <Text style={styles.textoUbicacion}>
@@ -475,7 +1042,6 @@ export default function HomeScreen() {
                     </View>
                   )}
 
-                  {/* Fotografía guardada */}
                   {tarea.imagenUri && (
                     <Image
                       source={{ uri: tarea.imagenUri }}
@@ -518,13 +1084,11 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Pie de página */}
         <View style={styles.pie}>
           <Text style={styles.textoPie}>ORGANIZA+ · Un paso a la vez.</Text>
         </View>
       </ScrollView>
 
-      {/* Componente de cámara */}
       <CamaraTarea
         visible={mostrarCamara}
         onClose={() => setMostrarCamara(false)}
@@ -534,12 +1098,8 @@ export default function HomeScreen() {
   );
 }
 
-// Estilos de la aplicación.
 const styles = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    backgroundColor: "#F5F7FB",
-  },
+  contenedor: { flex: 1, backgroundColor: "#F5F7FB" },
   contenido: {
     width: "100%",
     maxWidth: 850,
@@ -561,15 +1121,20 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: 10,
   },
-  tituloPrincipal: {
-    color: "#20263A",
-    fontSize: 30,
-    fontWeight: "800",
+  tituloPrincipal: { color: "#20263A", fontSize: 30, fontWeight: "800" },
+  subtitulo: { color: "#747D91", fontSize: 14, marginTop: 7 },
+  botonCerrarSesion: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 9,
+    backgroundColor: "#EEF0FF",
   },
-  subtitulo: {
-    color: "#747D91",
-    fontSize: 14,
-    marginTop: 7,
+  textoCerrarSesion: {
+    color: "#5965D9",
+    fontSize: 12,
+    fontWeight: "700",
   },
   iconoEncabezado: {
     width: 52,
@@ -579,16 +1144,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconoTexto: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  resumen: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 32,
-  },
+  iconoTexto: { color: "#FFFFFF", fontSize: 28, fontWeight: "700" },
+  resumen: { flexDirection: "row", gap: 12, marginBottom: 32 },
   tarjetaResumen: {
     flex: 1,
     minWidth: 0,
@@ -618,30 +1175,16 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 18,
   },
-  encabezadoLista: {
-    flex: 1,
-  },
-  tituloLista: {
-    color: "#242A3D",
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  descripcionSeccion: {
-    color: "#858DA0",
-    fontSize: 12,
-    marginTop: 5,
-  },
+  encabezadoLista: { flex: 1 },
+  tituloLista: { color: "#242A3D", fontSize: 22, fontWeight: "800" },
+  descripcionSeccion: { color: "#858DA0", fontSize: 12, marginTop: 5 },
   botonAgregar: {
     backgroundColor: "#5965D9",
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
   },
-  textoBotonAgregar: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  textoBotonAgregar: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
   formulario: {
     backgroundColor: "#FFFFFF",
     borderRadius: 17,
@@ -673,10 +1216,7 @@ const styles = StyleSheet.create({
     marginBottom: 17,
     backgroundColor: "#FCFCFE",
   },
-  campoDescripcion: {
-    minHeight: 90,
-    textAlignVertical: "top",
-  },
+  campoDescripcion: { minHeight: 90, textAlignVertical: "top" },
   botonFotografia: {
     backgroundColor: "#EEF0FF",
     borderRadius: 11,
@@ -685,26 +1225,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  textoBotonFotografia: {
-    color: "#5965D9",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  contenedorImagen: {
-    alignItems: "center",
-    marginBottom: 18,
-    gap: 9,
-  },
-  imagenTarea: {
-    width: 180,
-    height: 150,
-    borderRadius: 12,
-  },
-  textoEliminarImagen: {
-    color: "#D65C68",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  textoBotonFotografia: { color: "#5965D9", fontSize: 13, fontWeight: "700" },
+  contenedorImagen: { alignItems: "center", marginBottom: 18, gap: 9 },
+  imagenTarea: { width: 180, height: 150, borderRadius: 12 },
+  textoEliminarImagen: { color: "#D65C68", fontSize: 12, fontWeight: "700" },
   imagenTarjeta: {
     width: "100%",
     height: 150,
@@ -724,11 +1248,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 5,
   },
-  coordenadasUbicacion: {
-    color: "#606A80",
-    fontSize: 11,
-    marginTop: 2,
-  },
+  coordenadasUbicacion: { color: "#606A80", fontSize: 11, marginTop: 2 },
   botonesFormulario: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -741,29 +1261,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#F0F2F8",
   },
-  textoCancelar: {
-    color: "#606A80",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  textoCancelar: { color: "#606A80", fontSize: 13, fontWeight: "700" },
   botonGuardar: {
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: "#5965D9",
   },
-  textoGuardar: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  filtros: {
-    marginBottom: 18,
-    flexGrow: 0,
-  },
-  contenidoFiltros: {
-    gap: 9,
-  },
+  textoGuardar: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  filtros: { marginBottom: 18, flexGrow: 0 },
+  contenidoFiltros: { gap: 9 },
   botonFiltro: {
     paddingVertical: 10,
     paddingHorizontal: 17,
@@ -772,19 +1279,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E6E9F2",
   },
-  botonFiltroActivo: {
-    backgroundColor: "#E8EAFE",
-    borderColor: "#D5D9FF",
-  },
-  textoFiltro: {
-    color: "#737C90",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  textoFiltroActivo: {
-    color: "#505BD0",
-    fontWeight: "800",
-  },
+  botonFiltroActivo: { backgroundColor: "#E8EAFE", borderColor: "#D5D9FF" },
+  textoFiltro: { color: "#737C90", fontSize: 13, fontWeight: "600" },
+  textoFiltroActivo: { color: "#505BD0", fontWeight: "800" },
   estadoVacio: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -803,11 +1300,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 17,
   },
-  iconoVacioTexto: {
-    color: "#5965D9",
-    fontSize: 29,
-    fontWeight: "800",
-  },
+  iconoVacioTexto: { color: "#5965D9", fontSize: 29, fontWeight: "800" },
   tituloVacio: {
     color: "#343B50",
     fontSize: 17,
@@ -829,14 +1322,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginTop: 20,
   },
-  textoBotonVacio: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  listaTareas: {
-    gap: 13,
-  },
+  textoBotonVacio: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  listaTareas: { gap: 13 },
   tarjetaTarea: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -857,29 +1344,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 1,
   },
-  checkboxActivo: {
-    backgroundColor: "#5965D9",
-    borderColor: "#5965D9",
-  },
-  marcaCheckbox: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  informacionTarea: {
-    flex: 1,
-    minWidth: 0,
-  },
+  checkboxActivo: { backgroundColor: "#5965D9", borderColor: "#5965D9" },
+  marcaCheckbox: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
+  informacionTarea: { flex: 1, minWidth: 0 },
   tituloTarea: {
     color: "#30364B",
     fontSize: 15,
     fontWeight: "700",
     lineHeight: 21,
   },
-  tareaTerminada: {
-    color: "#969DAE",
-    textDecorationLine: "line-through",
-  },
+  tareaTerminada: { color: "#969DAE", textDecorationLine: "line-through" },
   descripcionTarea: {
     color: "#81899B",
     fontSize: 13,
@@ -892,30 +1366,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginTop: 11,
   },
-  estadoPendiente: {
-    color: "#C18431",
-  },
-  estadoCompletada: {
-    color: "#319A78",
-  },
-  accionesTarea: {
-    alignItems: "flex-end",
-    gap: 12,
-  },
-  botonAccion: {
-    paddingVertical: 3,
-    paddingHorizontal: 2,
-  },
-  textoEditar: {
-    color: "#5965D9",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  textoEliminar: {
-    color: "#D65C68",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  estadoPendiente: { color: "#C18431" },
+  estadoCompletada: { color: "#319A78" },
+  accionesTarea: { alignItems: "flex-end", gap: 12 },
+  botonAccion: { paddingVertical: 3, paddingHorizontal: 2 },
+  textoEditar: { color: "#5965D9", fontSize: 12, fontWeight: "700" },
+  textoEliminar: { color: "#D65C68", fontSize: 12, fontWeight: "700" },
   pie: {
     alignItems: "center",
     marginTop: 35,
@@ -923,9 +1379,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E9F1",
   },
-  textoPie: {
-    color: "#969DAE",
-    fontSize: 11,
-    letterSpacing: 1,
-  },
+  textoPie: { color: "#969DAE", fontSize: 11, letterSpacing: 1 },
 });

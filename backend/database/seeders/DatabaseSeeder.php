@@ -1,4 +1,3 @@
-
 <?php
 
 namespace Database\Seeders;
@@ -6,11 +5,8 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class DemoUsersSeeder extends Seeder
+class DatabaseSeeder extends Seeder
 {
-    /**
-     * Crear o actualizar las cuentas de demostración.
-     */
     public function run(): void
     {
         // Crear la cuenta de administrador.
@@ -23,7 +19,7 @@ class DemoUsersSeeder extends Seeder
             ]
         );
 
-        // Crear o actualizar la cuenta de usuario normal.
+        // Crear la cuenta de usuario normal.
         User::updateOrCreate(
             ['email' => 'usuario@organizaplus.test'],
             [

@@ -1,8 +1,8 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Task;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -24,7 +24,7 @@ class TaskController extends Controller
     }
 
     /**
-     * Crear una nueva tarea.
+     * Crear una tarea y guardar su fotografía.
      */
     public function store(Request $request)
     {
@@ -32,10 +32,18 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'completed' => 'sometimes|boolean',
-            'image_path' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:5120',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
         ]);
+
+        // Guardar la fotografía en storage/app/public/tasks.
+        if ($request->hasFile('image')) {
+            $datos['image_path'] = $request->file('image')
+                ->store('tasks', 'public');
+        }
+
+        unset($datos['image']);
 
         $tarea = $request->user()->tasks()->create($datos);
 
