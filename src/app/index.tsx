@@ -260,6 +260,16 @@ export default function HomeScreen() {
           ? JSON.parse(datosGuardados)
           : [];
 
+        console.log("Clave de almacenamiento:", claveTareas);
+        console.log(
+          "Tareas guardadas:",
+          tareasLocales.map((tarea) => ({
+            id: tarea.id,
+            serverId: tarea.serverId ?? null,
+            titulo: tarea.titulo,
+          })),
+        );
+
         if (!activo) return;
 
         setTareas(tareasLocales);

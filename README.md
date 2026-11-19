@@ -1,77 +1,157 @@
-# TaskFlow
+# Organiza+
 
-## Aplicación móvil para la gestión de tareas
+## Aplicación móvil para la organización y administración de tareas
 
-TaskFlow es una aplicación móvil de tipo To-Do List desarrollada con React Native, Expo y TypeScript. Permite organizar tareas personales, controlar su estado y consultar el progreso de las actividades desde una interfaz sencilla.
+Organiza+ es una aplicación móvil desarrollada con React Native, Expo y TypeScript, que permite administrar tareas personales desde un dispositivo móvil.
 
-## 1. Descripción del proyecto
+La aplicación incorpora funcionalidades para crear, visualizar, modificar y eliminar tareas, además de utilizar periféricos internos del dispositivo, como la cámara y el GPS. De esta manera, es posible adjuntar fotografías y registrar la ubicación geográfica asociada a una tarea.
 
-La aplicación permite registrar actividades, modificar su información, eliminarlas y marcar las tareas como completadas. También incluye filtros para organizar las tareas y una pantalla que presenta estadísticas del progreso.
+El proyecto también contempla almacenamiento local, funcionamiento sin conexión a internet y sincronización de información con un servidor remoto desarrollado con Laravel.
 
-Cada tarea contiene los siguientes datos:
+## 1. Objetivo del proyecto
 
-- **Identificador:** permite distinguir una tarea de otra.
-- **Título:** indica el nombre de la actividad.
-- **Descripción:** proporciona información adicional sobre la tarea.
-- **Estado:** indica si la tarea está pendiente o completada.
+### 1.1. Objetivo general
 
-## 2. Objetivos
+Desarrollar una aplicación móvil que facilite la organización de tareas personales mediante herramientas de gestión, almacenamiento de información e integración con los periféricos internos del dispositivo.
 
-### 2.1. Objetivo general
+### 1.2. Objetivos específicos
 
-Desarrollar una aplicación móvil para gestionar tareas personales, aplicando conceptos fundamentales de programación móvil, componentes de interfaz, navegación y almacenamiento de información.
+- Implementar operaciones para crear, consultar, editar y eliminar tareas.
+- Integrar la cámara del dispositivo para capturar fotografías y asociarlas a las tareas.
+- Utilizar el GPS para obtener y registrar la ubicación geográfica.
+- Solicitar los permisos necesarios para acceder a los periféricos del dispositivo.
+- Incorporar almacenamiento local para conservar la información.
+- Permitir el uso de la aplicación cuando no existe conexión a internet.
+- Implementar la sincronización de las tareas pendientes con un servidor remoto.
+- Aplicar pruebas para comprobar el funcionamiento de las principales funcionalidades.
 
-### 2.2. Objetivos específicos
+## 2. Tecnologías y herramientas utilizadas
 
-- Comprender la estructura de un proyecto desarrollado con React Native y Expo.
-- Implementar una interfaz organizada e intuitiva.
-- Crear funcionalidades para registrar, consultar, editar y eliminar tareas.
-- Incorporar opciones para cambiar el estado y filtrar las tareas.
-- Utilizar almacenamiento local para conservar la información.
-- Aplicar componentes y herramientas de React para organizar el código.
-- Realizar pruebas funcionales para comprobar el comportamiento de la aplicación.
+| Tecnología o herramienta | Uso en el proyecto                                    |
+| ------------------------ | ----------------------------------------------------- |
+| React Native             | Desarrollo de la interfaz móvil.                      |
+| Expo                     | Configuración y ejecución de la aplicación.           |
+| Expo Router              | Organización de las pantallas y navegación.           |
+| TypeScript               | Desarrollo y definición de tipos de datos.            |
+| Expo Camera              | Acceso a la cámara del dispositivo.                   |
+| Expo Location            | Obtención de la ubicación mediante GPS.               |
+| AsyncStorage             | Almacenamiento local de información.                  |
+| SecureStore              | Almacenamiento seguro de información de sesión.       |
+| NetInfo                  | Detección del estado de conexión a internet.          |
+| Laravel                  | Desarrollo del servidor y la API REST.                |
+| Laravel Sanctum          | Autenticación mediante tokens.                        |
+| MySQL                    | Almacenamiento de información en el servidor.         |
+| Jest                     | Ejecución de pruebas automatizadas.                   |
+| Postman                  | Comprobación de las solicitudes a la API.             |
+| Git y GitHub             | Control de versiones y publicación del código fuente. |
+| Visual Studio Code       | Editor utilizado durante el desarrollo.               |
 
-## 3. Tecnologías y herramientas utilizadas
+## 3. Funcionalidades principales
 
-| Tecnología o herramienta | Uso en el proyecto                                              |
-| ------------------------ | --------------------------------------------------------------- |
-| React Native             | Desarrollo de las pantallas y componentes de la interfaz móvil. |
-| Expo                     | Configuración, ejecución y pruebas de la aplicación.            |
-| Expo Router              | Organización de la navegación mediante archivos y rutas.        |
-| TypeScript               | Definición de tipos de datos y estructura de las tareas.        |
-| Node.js                  | Entorno utilizado para ejecutar herramientas de desarrollo.     |
-| npm                      | Instalación y administración de dependencias.                   |
-| AsyncStorage             | Almacenamiento local de las tareas en el dispositivo.           |
-| Visual Studio Code       | Editor utilizado para desarrollar el proyecto.                  |
-| Git y GitHub             | Control de versiones y publicación del código fuente.           |
+Organiza+ incorpora las siguientes funcionalidades:
 
-### 3.1. Justificación de las tecnologías
+- Registro e inicio de sesión de usuarios.
+- Visualización de las tareas registradas.
+- Creación de nuevas tareas.
+- Edición de la información de una tarea.
+- Eliminación de tareas.
+- Cambio del estado de las tareas.
+- Captura de fotografías mediante la cámara del dispositivo.
+- Registro de coordenadas geográficas mediante el GPS.
+- Almacenamiento local de información.
+- Funcionamiento sin conexión a internet.
+- Sincronización de tareas pendientes con el servidor.
+- Cierre de sesión.
 
-React Native permite construir interfaces móviles mediante componentes reutilizables. Expo facilita la configuración y las pruebas en dispositivos móviles, mientras que TypeScript ayuda a mantener una estructura consistente en los datos.
+## 4. Integración con los periféricos del dispositivo
 
-AsyncStorage se utiliza para conservar las tareas sin necesitar una base de datos externa ni un servidor. La información se guarda localmente en el dispositivo.
+Una de las características principales de Organiza+ es la utilización de recursos internos del dispositivo móvil.
 
-El proyecto utiliza React Native con Expo y no Ionic, de acuerdo con las indicaciones de la evaluación.
+### 4.1. Cámara
 
-## 4. Arquitectura y estructura del proyecto
+La aplicación utiliza Expo Camera para acceder a la cámara del dispositivo.
 
-TaskFlow utiliza una organización basada en componentes. La navegación entre pantallas se administra mediante Expo Router.
+Al crear una tarea, el usuario puede tomar una fotografía y asociarla a la actividad. Esta funcionalidad permite complementar la información escrita con un registro visual.
 
-La estructura principal del proyecto es la siguiente:
+La fotografía queda asociada a la tarea y puede almacenarse localmente para su posterior sincronización con el servidor.
+
+### 4.2. GPS y ubicación geográfica
+
+La aplicación utiliza Expo Location para obtener la ubicación geográfica del dispositivo.
+
+Al crear una tarea, se puede registrar la latitud y longitud correspondientes a la ubicación obtenida. Estos datos quedan asociados a la tarea y permiten identificar el lugar donde fue registrada.
+
+### 4.3. Solicitud de permisos
+
+Para utilizar estos recursos, la aplicación solicita los permisos correspondientes al usuario.
+
+Los permisos configurados son:
+
+- **Cámara:** permite fotografiar las tareas.
+- **Ubicación mientras se usa la aplicación:** permite obtener la ubicación al crear una tarea.
+
+La configuración de estos permisos se encuentra en `app.json`.
+
+## 5. Almacenamiento y funcionamiento sin conexión
+
+Organiza+ incorpora almacenamiento local mediante AsyncStorage, lo que permite conservar información en el dispositivo.
+
+Además, utiliza NetInfo para detectar si existe conexión a internet.
+
+Cuando el dispositivo se encuentra sin conexión, la aplicación permite trabajar con las tareas utilizando los mecanismos de almacenamiento local y sincronización implementados.
+
+Cuando se recupera la conexión, las tareas pendientes pueden enviarse al servidor Laravel. Este proceso permite mantener la información local y remota sincronizada.
+
+La aplicación también contempla mecanismos para evitar que una misma tarea pendiente se registre repetidamente durante la sincronización.
+
+## 6. Servidor y API REST
+
+El proyecto incorpora un backend desarrollado con Laravel, que proporciona una API REST para gestionar la información de los usuarios y sus tareas.
+
+La API contempla las siguientes operaciones:
+
+| Método    | Endpoint          | Función                           |
+| --------- | ----------------- | --------------------------------- |
+| POST      | `/api/register`   | Registrar un usuario.             |
+| POST      | `/api/login`      | Iniciar sesión.                   |
+| GET       | `/api/me`         | Consultar el usuario autenticado. |
+| POST      | `/api/logout`     | Cerrar sesión.                    |
+| GET       | `/api/tasks`      | Consultar tareas.                 |
+| POST      | `/api/tasks`      | Crear una tarea.                  |
+| GET       | `/api/tasks/{id}` | Consultar una tarea específica.   |
+| PUT/PATCH | `/api/tasks/{id}` | Modificar una tarea.              |
+| DELETE    | `/api/tasks/{id}` | Eliminar una tarea.               |
+
+Las rutas que requieren autenticación están protegidas mediante Laravel Sanctum. Para acceder a ellas, la aplicación debe enviar un token válido.
+
+La información de las tareas puede incluir título, descripción, estado, imagen y coordenadas geográficas.
+
+## 7. Estructura del proyecto
+
+La estructura general del repositorio es la siguiente:
 
 ```text
-TaskFlow/
+OrganizaPlus/
 ├── assets/
+├── backend/
+│   ├── app/
+│   ├── bootstrap/
+│   ├── config/
+│   ├── database/
+│   ├── public/
+│   ├── resources/
+│   ├── routes/
+│   ├── storage/
+│   ├── tests/
+│   ├── composer.json
+│   └── .env.example
 ├── docs/
 │   └── evidencias/
+├── scripts/
 ├── src/
 │   ├── app/
-│   │   ├── _layout.tsx
-│   │   ├── explore.tsx
-│   │   └── index.tsx
 │   ├── components/
-│   ├── constants/
-│   └── hooks/
+│   └── services/
 ├── app.json
 ├── package.json
 ├── package-lock.json
@@ -79,157 +159,183 @@ TaskFlow/
 └── README.md
 ```
 
-### 4.1. Descripción de las carpetas y archivos
+### 7.1. Descripción de las carpetas principales
 
-- `src/app/index.tsx`: contiene la pantalla principal, donde se pueden crear, visualizar, editar, eliminar y completar tareas.
-- `src/app/explore.tsx`: contiene la pantalla Mi progreso, que muestra estadísticas de las actividades.
-- `src/app/_layout.tsx`: configura la estructura general de navegación y el tema de la aplicación.
-- `src/components/`: contiene componentes relacionados con la navegación por pestañas.
-- `src/hooks/use-theme.ts`: contiene lógica relacionada con el tema visual.
-- `assets/`: almacena recursos gráficos y otros elementos utilizados por la aplicación.
-- `package.json`: contiene información del proyecto y sus dependencias.
-- `tsconfig.json`: define la configuración de TypeScript.
+- `src/app/`: contiene las pantallas principales de la aplicación.
+- `src/components/`: contiene componentes reutilizables de la interfaz.
+- `src/services/`: contiene servicios relacionados con la comunicación y gestión de información.
+- `assets/`: almacena recursos gráficos utilizados por la aplicación.
+- `backend/`: contiene el servidor Laravel y la API REST.
+- `backend/routes/api.php`: define las rutas de la API.
+- `backend/database/`: contiene las migraciones y otros elementos relacionados con la base de datos.
+- `docs/evidencias/`: almacena las capturas utilizadas para documentar el funcionamiento del proyecto.
 
-Esta organización permite identificar dónde se encuentra cada funcionalidad y facilita realizar modificaciones a medida que se incorporan nuevas características.
+## 8. Instalación y ejecución
 
-## 5. Patrones de diseño y organización del código
+### 8.1. Requisitos
 
-TaskFlow utiliza una organización basada en componentes, característica de React Native, que permite separar las funcionalidades y mantener el código ordenado.
+Para ejecutar el proyecto se requiere:
 
-Entre los principales enfoques utilizados se encuentran:
+- Node.js y npm.
+- PHP 8.3 o compatible con la versión de Laravel utilizada.
+- Composer.
+- MySQL.
+- Laragon u otro entorno que permita ejecutar PHP y MySQL.
+- Expo Go instalado en el dispositivo móvil.
+- Visual Studio Code u otro editor de código.
 
-- **Arquitectura basada en componentes:** permite organizar la interfaz en elementos con funciones específicas.
-- **Hooks de React:** permiten gestionar el estado y ejecutar efectos relacionados con el funcionamiento de las pantallas.
-- **Navegación basada en archivos:** Expo Router organiza las pantallas mediante los archivos ubicados en `src/app`.
+### 8.2. Configuración del backend
 
-Por ejemplo, `index.tsx` contiene las funcionalidades para administrar tareas, mientras que `explore.tsx` presenta las estadísticas de progreso. Esta separación facilita la comprensión y modificación del código.
+Primero, ingresar a la carpeta del backend:
 
-## 6. Diseño de la interfaz
-
-TaskFlow presenta una interfaz de tonos claros, con tarjetas blancas, textos oscuros y elementos destacados en azul y morado. Su diseño busca mantener una apariencia ordenada y facilitar la navegación entre las funciones.
-
-Se aplican los siguientes principios de diseño:
-
-- **Jerarquía visual:** los títulos, las estadísticas y las tareas se distinguen mediante diferentes tamaños de texto.
-- **Contraste:** los colores y las tarjetas ayudan a diferenciar la información y las acciones disponibles.
-- **Organización y equilibrio:** los elementos se distribuyen en secciones, separando la gestión de tareas de las estadísticas de progreso.
-- **Facilidad de uso:** los botones para crear, editar y eliminar tareas, los filtros y la navegación por pestañas permiten acceder a las funciones principales de forma directa.
-
-La pantalla principal permite administrar las tareas, mientras que Mi progreso muestra el porcentaje de avance y el resumen de actividades completadas y pendientes.
-
-## 7. Componentes de la interfaz
-
-TaskFlow incorpora distintos componentes que permiten al usuario interactuar con la aplicación:
-
-- **Formularios:** permiten ingresar los datos de una tarea y modificarlos posteriormente.
-- **Botones:** permiten ejecutar acciones como guardar, editar, completar y eliminar tareas.
-- **Listas:** muestran las tareas registradas y su estado.
-- **Filtros:** permiten visualizar todas las tareas, las pendientes o las completadas.
-- **Navegación por pestañas:** permite cambiar entre la lista de tareas y la pantalla de progreso.
-- **Barra de progreso:** representa visualmente el porcentaje de tareas completadas.
-
-La combinación de estos componentes permite administrar las tareas y consultar el avance desde una interfaz común.
-
-## 8. Funcionalidades implementadas
-
-TaskFlow permite administrar tareas personales mediante las siguientes funciones:
-
-- Crear y consultar tareas.
-- Editar y eliminar tareas.
-- Marcar tareas como completadas.
-- Filtrar tareas según su estado.
-- Consultar estadísticas de progreso.
-- Guardar las tareas localmente mediante AsyncStorage.
-
-Además, se valida que el título no esté vacío antes de guardar una tarea, evitando registrar información sin el dato principal requerido.
-
-### 8.1. Almacenamiento local
-
-Las tareas se guardan mediante AsyncStorage utilizando la siguiente clave:
-
-```text
-@taskflow/tareas
+```powershell
+cd backend
 ```
 
-La información permanece guardada al cerrar y volver a abrir la aplicación en el mismo dispositivo. Esta implementación no incluye sincronización automática entre dispositivos.
+Instalar las dependencias:
 
-## 9. Pruebas y resultados
+```powershell
+composer install
+```
 
-Se realizaron pruebas en un dispositivo móvil utilizando Expo Go para comprobar el funcionamiento de las principales características de TaskFlow.
+Crear el archivo de configuración local a partir del ejemplo:
 
-| Prueba realizada                      | Resultado                      |
-| ------------------------------------- | ------------------------------ |
-| Crear una tarea                       | Correcto                       |
-| Editar una tarea                      | Correcto                       |
-| Eliminar una tarea                    | Correcto                       |
-| Marcar una tarea como completada      | Correcto                       |
-| Filtrar tareas por estado             | Correcto                       |
-| Intentar guardar una tarea sin título | Se impide el registro          |
-| Cerrar y volver a abrir la aplicación | Las tareas se conservan        |
-| Consultar el progreso                 | Las estadísticas se actualizan |
+```powershell
+Copy-Item .env.example .env
+```
 
-También se verificó el proyecto mediante TypeScript y Expo Doctor. Este último completó sus 20 comprobaciones correctamente.
+Generar la clave de Laravel:
 
-Los resultados permitieron comprobar el funcionamiento de las características evaluadas.
+```powershell
+php artisan key:generate
+```
 
-## 10. Evidencias de funcionamiento
+Crear previamente una base de datos MySQL llamada `organiza_plus` y configurar las credenciales correspondientes en el archivo `.env`.
 
-A continuación, se presentan capturas de pantalla que permiten observar la interfaz y las principales funcionalidades implementadas en TaskFlow.
+Ejecutar las migraciones:
 
-### Figura 1. Pantalla principal Home
+```powershell
+php artisan migrate
+```
 
-Muestra la lista de tareas, los filtros disponibles y las acciones para administrarlas.
+Iniciar el servidor:
 
-![Pantalla principal de TaskFlow](docs/evidencias/home.png)
+```powershell
+php artisan serve --host=0.0.0.0 --port=8000
+```
 
-### Figura 2. Creación o edición de tareas
+### 8.3. Configuración del frontend
 
-Muestra el formulario utilizado para ingresar o modificar la información de una tarea.
+Desde la carpeta principal del proyecto, instalar las dependencias:
 
-![Formulario de tareas](docs/evidencias/formulario.png)
+```powershell
+npm install
+```
 
-### Figura 3. Pantalla Mi progreso
+Configurar la dirección de la API en:
 
-Muestra el total de tareas, las actividades completadas y pendientes, y la barra de progreso.
+`src/services/api.ts`
 
-![Pantalla Mi progreso](docs/evidencias/progreso.png)
+La dirección debe utilizar la IP local del computador donde se ejecuta Laravel, por ejemplo:
 
-### Figura 4. Validación de datos
+```typescript
+export const API_URL = "http://IP_LOCAL_DEL_COMPUTADOR:8000/api";
+```
 
-Muestra cómo la aplicación impide guardar una tarea cuando el título está vacío.
+Se debe reemplazar `IP_LOCAL_DEL_COMPUTADOR` por la dirección IP correspondiente. El dispositivo móvil y el computador deben estar conectados a la misma red para realizar las pruebas mediante la red local.
 
-![Validación del título](docs/evidencias/validacion.png)
+Iniciar Expo:
 
-**Nota:** las rutas de las imágenes son ejemplos. Deben coincidir con los nombres y las ubicaciones reales de las capturas que se suban al repositorio.
+```powershell
+npx expo start --go --lan
+```
+
+Finalmente, abrir Expo Go en el dispositivo móvil y escanear el código QR que muestra la terminal.
+
+## 9. Pruebas realizadas
+
+Durante el desarrollo se realizaron pruebas funcionales y automatizadas para comprobar el comportamiento de la aplicación.
+
+Entre las verificaciones realizadas se encuentran:
+
+- Creación, edición y eliminación de tareas.
+- Captura de fotografías mediante la cámara.
+- Obtención y registro de coordenadas geográficas.
+- Conservación de información en el almacenamiento local.
+- Funcionamiento sin conexión a internet.
+- Sincronización de tareas pendientes con Laravel.
+- Validación de acceso a rutas protegidas mediante autenticación.
+- Comprobación de respuestas de la API utilizando Postman.
+
+### 9.1. Pruebas automatizadas
+
+Se ejecutaron pruebas con Jest para comprobar diferentes partes de la aplicación.
+
+**Resultado registrado:**
+
+- 3 suites de pruebas aprobadas.
+- 9 pruebas aprobadas.
+- 0 pruebas fallidas.
+
+Los archivos de pruebas corresponden a los servicios de tareas y ubicación, además del componente relacionado con la cámara.
+
+Para ejecutar las pruebas:
+
+```powershell
+npm test
+```
+
+También se realizó una comprobación de tipos con:
+
+```powershell
+npx tsc --noEmit
+```
+
+## 10. Evidencias del proyecto
+
+Las siguientes evidencias documentan las funcionalidades implementadas y las pruebas realizadas.
+
+Las capturas se incorporarán en la carpeta `docs/evidencias/` del repositorio.
+
+1. Pantalla principal de Organiza+.
+2. Registro e inicio de sesión.
+3. Cierre de sesión.
+4. Solicitud de permisos de cámara y ubicación.
+5. Captura de una fotografía y asociación a una tarea.
+6. Registro de ubicación geográfica.
+7. Operaciones de creación, consulta, edición y eliminación de tareas.
+8. Funcionamiento sin conexión y posterior sincronización con Laravel.
+9. Importación complementaria de tareas desde un servicio externo.
+10. Prevención de registros duplicados durante la sincronización.
+11. Resultado de las pruebas automatizadas.
+12. Comprobación de autenticación mediante Postman:
+    - Acceso sin autenticación: HTTP 401.
+    - Acceso con token válido: HTTP 200.
+    - Cierre de sesión mediante la API: HTTP 200.
+13. Comprobación de los registros almacenados en el servidor mediante Laravel Tinker.
 
 ## 11. Video de demostración
 
-El video mostrará el funcionamiento de TaskFlow, incluyendo la creación, edición y eliminación de tareas, el uso de los filtros y la consulta de las estadísticas de progreso.
+En esta sección se incorporará el enlace al video de demostración del proyecto.
 
-**Enlace al video:** (https://youtu.be/INgNnLUHROU)
+**Enlace al video:** Pendiente de incorporar.
 
 ## 12. Uso de herramientas de inteligencia artificial
 
-Durante el desarrollo se utilizaron herramientas de inteligencia artificial como apoyo para resolver dudas, comprender conceptos y orientar la implementación de funcionalidades.
+Durante el desarrollo se utilizaron herramientas de inteligencia artificial como apoyo para resolver dudas, comprender conceptos de programación, revisar código y orientar la implementación de algunas funcionalidades.
 
-El código se probó durante el desarrollo para comprobar que las funciones implementadas trabajaran correctamente.
+Las funcionalidades se fueron probando durante el desarrollo para verificar su comportamiento y realizar los ajustes necesarios.
 
-## 13. Mejoras futuras
+## 13. Conclusión
 
-Como posibles mejoras, se propone incorporar fechas de vencimiento, categorías para organizar las tareas y notificaciones para recordar actividades pendientes.
+El desarrollo de Organiza+ permitió aplicar conocimientos de programación móvil mediante React Native, Expo y TypeScript, incorporando funcionalidades de gestión de tareas y utilización de los recursos internos del dispositivo.
 
-Estas funciones podrían ampliar las posibilidades de organización de TaskFlow en futuras versiones.
+La integración de la cámara y el GPS permite complementar las tareas con fotografías y datos de ubicación. Asimismo, el almacenamiento local y la sincronización con un servidor Laravel permiten trabajar con la información incluso cuando no existe conexión a internet.
 
-## 14. Conclusión
+Las pruebas realizadas permitieron comprobar el funcionamiento de las principales características de la aplicación, incluyendo el acceso a los periféricos, la gestión de tareas, la autenticación y la sincronización de información.
 
-El desarrollo de TaskFlow permitió aplicar conocimientos de programación móvil utilizando React Native, Expo y TypeScript.
+## 14. Repositorio
 
-La aplicación incorpora las principales operaciones de gestión de tareas, almacenamiento local y seguimiento del progreso. Las pruebas realizadas permitieron verificar el funcionamiento de estas características y comprobar que la información registrada se conserva al volver a abrir la aplicación.
+**Código fuente de Organiza+:**
 
-Este proyecto permitió poner en práctica conceptos de desarrollo de interfaces, organización del código, navegación y almacenamiento de datos en una aplicación móvil.
-
-## 15. Repositorio del proyecto
-
-Código fuente de TaskFlow:
-
-[https://github.com/alexandran-debug/TaskFlow](https://github.com/alexandran-debug/TaskFlow)
+https://github.com/alexandran-debug/OrganizaPlus
