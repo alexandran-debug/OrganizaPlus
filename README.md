@@ -297,75 +297,75 @@ Las siguientes evidencias documentan las principales funcionalidades implementad
 
 ### Evidencia 01. Pantalla principal
 
-![Pantalla principal de Organiza+](docs/evidencias/01-pantalla-principal.png)
+<img src="docs/evidencias/01-pantalla-principal.png" width="350" alt="Pantalla principal de Organiza+">
 
 ### Evidencia 02. Registro e inicio de sesión
 
 **Inicio de sesión**
 
-![Inicio de sesión](docs/evidencias/02-autenticacion-inicio.png)
+<img src="docs/evidencias/02-autenticacion-inicio.png" width="350" alt="Inicio de sesión">
 
 **Registro de usuario**
 
-![Registro de usuario](docs/evidencias/02-autenticacion-registro.png)
+<img src="docs/evidencias/02-autenticacion-registro.png" width="350" alt="Registro de usuario">
 
 ### Evidencia 03. Cierre de sesión
 
-![Cierre de sesión](docs/evidencias/03-cierre-sesion.png)
+<img src="docs/evidencias/03-cierre-sesion.png" width="350" alt="Cierre de sesión">
 
 ### Evidencia 04. Permisos de cámara y GPS
 
 **Permiso de cámara**
 
-![Permiso de cámara](docs/evidencias/04-permisos-camara.png)
+<img src="docs/evidencias/04-permisos-camara.png" width="350" alt="Permiso de cámara">
 
 **Permiso de ubicación**
 
-![Permiso de GPS](docs/evidencias/04-permisos-gps.png)
+<img src="docs/evidencias/04-permisos-gps.png" width="350" alt="Permiso de GPS">
 
 ### Evidencia 05. Captura y asociación de fotografías
 
-![Captura de fotografía 1](docs/evidencias/05-captura-fotografia-01.png)
+<img src="docs/evidencias/05-captura-fotografia-01.png" width="350" alt="Captura de fotografía 1">
 
-![Captura de fotografía 2](docs/evidencias/05-captura-fotografia-02.png)
+<img src="docs/evidencias/05-captura-fotografia-02.png" width="350" alt="Captura de fotografía 2">
 
 ### Evidencia 06. Registro de ubicación GPS
 
-![Registro de ubicación GPS](docs/evidencias/06-ubicacion-gps.png)
+<img src="docs/evidencias/06-ubicacion-gps.png" width="350" alt="Registro de ubicación GPS">
 
 ### Evidencia 07. Gestión de tareas
 
 Las siguientes capturas muestran las operaciones de gestión de tareas implementadas en la aplicación.
 
-![Gestión de tareas 1](docs/evidencias/07-gestion-tareas-01.png)
+<img src="docs/evidencias/07-gestion-tareas-01.png" width="350" alt="Gestión de tareas 1">
 
-![Gestión de tareas 2](docs/evidencias/07-gestion-tareas-02.png)
+<img src="docs/evidencias/07-gestion-tareas-02.png" width="350" alt="Gestión de tareas 2">
 
-![Gestión de tareas 3](docs/evidencias/07-gestion-tareas-03.png)
+<img src="docs/evidencias/07-gestion-tareas-03.png" width="350" alt="Gestión de tareas 3">
 
-![Gestión de tareas 4](docs/evidencias/07-gestion-tareas-04.png)
+<img src="docs/evidencias/07-gestion-tareas-04.png" width="350" alt="Gestión de tareas 4">
 
 ### Evidencia 08. Funcionamiento sin conexión y sincronización
 
-![Sincronización sin conexión 1](docs/evidencias/08-sincronizacion-offline-01.png)
+<img src="docs/evidencias/08-sincronizacion-offline-01.png" width="350" alt="Sincronización sin conexión 1">
 
-![Sincronización sin conexión 2](docs/evidencias/08-sincronizacion-offline-02.png)
+<img src="docs/evidencias/08-sincronizacion-offline-02.png" width="350" alt="Sincronización sin conexión 2">
 
 ### Evidencia 09. Importación de tareas
 
-![Importación de tareas 1](docs/evidencias/09-importacion-tareas-01.png)
+<img src="docs/evidencias/09-importacion-tareas-01.png" width="350" alt="Importación de tareas 1">
 
-![Importación de tareas 2](docs/evidencias/09-importacion-tareas-02.png)
+<img src="docs/evidencias/09-importacion-tareas-02.png" width="350" alt="Importación de tareas 2">
 
 ### Evidencia 10. Prevención de registros duplicados
 
-![Prevención de duplicados](docs/evidencias/10-prevencion-duplicados.png)
+<img src="docs/evidencias/10-prevencion-duplicados.png" width="350" alt="Prevención de duplicados">
 
 ### Evidencia 11. Pruebas automatizadas con Jest
 
 Se ejecutaron tres suites de pruebas, con nueve pruebas aprobadas y ninguna fallida.
 
-![Resultados de pruebas Jest](docs/evidencias/11-pruebas-jest-01.png)
+<img src="docs/evidencias/11-pruebas-jest-01.png" width="350" alt="Resultados de pruebas Jest">
 
 ### Evidencia 12. Pruebas de la API REST mediante Postman
 
@@ -373,23 +373,23 @@ Se ejecutaron tres suites de pruebas, con nueve pruebas aprobadas y ninguna fall
 
 Se comprueba que una solicitud sin token recibe una respuesta HTTP 401.
 
-![Postman - Acceso sin autenticación](docs/evidencias/12-postman-401.png)
+<img src="docs/evidencias/12-postman-401.png" width="350" alt="Postman - Acceso sin autenticación">
 
 **12.2. Acceso con token válido**
 
 Se comprueba el acceso a la API utilizando un token de autenticación válido.
 
-![Postman - Token válido](docs/evidencias/12-postman-token-valido.png)
+<img src="docs/evidencias/12-postman-token-valido.png" width="350" alt="Postman - Token válido">
 
 **12.3. Cierre de sesión mediante la API**
 
 Se comprueba el cierre de sesión mediante una solicitud a la API.
 
-![Postman - Cierre de sesión](docs/evidencias/12-postman-logout.png)
+<img src="docs/evidencias/12-postman-logout.png" width="350" alt="Postman - Cierre de sesión">
 
 ### Evidencia 13. Registros de tareas almacenados en Laravel
 
-![Registros de tareas en Laravel](docs/evidencias/13-registros-laravel.png)
+<img src="docs/evidencias/13-registros-laravel.png" width="350" alt="Registros de tareas en Laravel">
 
 ## 11. Video de demostración
 
