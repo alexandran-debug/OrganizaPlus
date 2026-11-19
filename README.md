@@ -146,7 +146,9 @@ OrganizaPlus/
 │   ├── composer.json
 │   └── .env.example
 ├── docs/
-│   └── evidencias/
+│   ├── evidencias/
+│   └── base-de-datos/
+│       └── organiza_plus.sql
 ├── scripts/
 ├── src/
 │   ├── app/
@@ -169,6 +171,7 @@ OrganizaPlus/
 - `backend/routes/api.php`: define las rutas de la API.
 - `backend/database/`: contiene las migraciones y otros elementos relacionados con la base de datos.
 - `docs/evidencias/`: almacena las capturas utilizadas para documentar el funcionamiento del proyecto.
+- `docs/base-de-datos/`: contiene el respaldo SQL para recuperar la estructura y los datos de ejemplo de la base de datos.
 
 ## 8. Instalación y ejecución
 
@@ -212,7 +215,17 @@ php artisan key:generate
 
 Crear previamente una base de datos MySQL llamada `organiza_plus` y configurar las credenciales correspondientes en el archivo `.env`.
 
-Ejecutar las migraciones:
+**Importar el respaldo de la base de datos:**
+
+El proyecto incluye un respaldo SQL en `docs/base-de-datos/organiza_plus.sql`, que contiene la estructura de las tablas y los registros de usuarios y tareas de ejemplo.
+
+Para restaurarlo utilizando HeidiSQL:
+
+1. Abrir HeidiSQL y conectarse al servidor MySQL local.
+2. Abrir el archivo `docs/base-de-datos/organiza_plus.sql`.
+3. Ejecutar el archivo SQL para crear las tablas y recuperar los registros.
+
+Después de importar el respaldo, ejecutar las migraciones para aplicar cualquier cambio pendiente:
 
 ```powershell
 php artisan migrate
