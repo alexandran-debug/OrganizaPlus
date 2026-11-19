@@ -293,26 +293,103 @@ npx tsc --noEmit
 
 ## 10. Evidencias del proyecto
 
-Las siguientes evidencias documentan las funcionalidades implementadas y las pruebas realizadas.
+Las siguientes evidencias documentan las principales funcionalidades implementadas en Organiza+ y las pruebas realizadas durante el desarrollo.
 
-Las capturas se incorporarán en la carpeta `docs/evidencias/` del repositorio.
+### Evidencia 01. Pantalla principal
 
-1. Pantalla principal de Organiza+.
-2. Registro e inicio de sesión.
-3. Cierre de sesión.
-4. Solicitud de permisos de cámara y ubicación.
-5. Captura de una fotografía y asociación a una tarea.
-6. Registro de ubicación geográfica.
-7. Operaciones de creación, consulta, edición y eliminación de tareas.
-8. Funcionamiento sin conexión y posterior sincronización con Laravel.
-9. Importación complementaria de tareas desde un servicio externo.
-10. Prevención de registros duplicados durante la sincronización.
-11. Resultado de las pruebas automatizadas.
-12. Comprobación de autenticación mediante Postman:
-    - Acceso sin autenticación: HTTP 401.
-    - Acceso con token válido: HTTP 200.
-    - Cierre de sesión mediante la API: HTTP 200.
-13. Comprobación de los registros almacenados en el servidor mediante Laravel Tinker.
+![Pantalla principal de Organiza+](docs/evidencias/01-pantalla-principal.png)
+
+### Evidencia 02. Registro e inicio de sesión
+
+**Inicio de sesión**
+
+![Inicio de sesión](docs/evidencias/02-autenticacion-inicio.png)
+
+**Registro de usuario**
+
+![Registro de usuario](docs/evidencias/02-autenticacion-registro.png)
+
+### Evidencia 03. Cierre de sesión
+
+![Cierre de sesión](docs/evidencias/03-cierre-sesion.png)
+
+### Evidencia 04. Permisos de cámara y GPS
+
+**Permiso de cámara**
+
+![Permiso de cámara](docs/evidencias/04-permisos-camara.png)
+
+**Permiso de ubicación**
+
+![Permiso de GPS](docs/evidencias/04-permisos-gps.png)
+
+### Evidencia 05. Captura y asociación de fotografías
+
+![Captura de fotografía 1](docs/evidencias/05-captura-fotografia-01.png)
+
+![Captura de fotografía 2](docs/evidencias/05-captura-fotografia-02.png)
+
+### Evidencia 06. Registro de ubicación GPS
+
+![Registro de ubicación GPS](docs/evidencias/06-ubicacion-gps.png)
+
+### Evidencia 07. Gestión de tareas
+
+Las siguientes capturas muestran las operaciones de gestión de tareas implementadas en la aplicación.
+
+![Gestión de tareas 1](docs/evidencias/07-gestion-tareas-01.png)
+
+![Gestión de tareas 2](docs/evidencias/07-gestion-tareas-02.png)
+
+![Gestión de tareas 3](docs/evidencias/07-gestion-tareas-03.png)
+
+![Gestión de tareas 4](docs/evidencias/07-gestion-tareas-04.png)
+
+### Evidencia 08. Funcionamiento sin conexión y sincronización
+
+![Sincronización sin conexión 1](docs/evidencias/08-sincronizacion-offline-01.png)
+
+![Sincronización sin conexión 2](docs/evidencias/08-sincronizacion-offline-02.png)
+
+### Evidencia 09. Importación de tareas
+
+![Importación de tareas 1](docs/evidencias/09-importacion-tareas-01.png)
+
+![Importación de tareas 2](docs/evidencias/09-importacion-tareas-02.png)
+
+### Evidencia 10. Prevención de registros duplicados
+
+![Prevención de duplicados](docs/evidencias/10-prevencion-duplicados.png)
+
+### Evidencia 11. Pruebas automatizadas con Jest
+
+Se ejecutaron tres suites de pruebas, con nueve pruebas aprobadas y ninguna fallida.
+
+![Resultados de pruebas Jest](docs/evidencias/11-pruebas-jest-01.png)
+
+### Evidencia 12. Pruebas de la API REST mediante Postman
+
+**12.1. Acceso sin autenticación**
+
+Se comprueba que una solicitud sin token recibe una respuesta HTTP 401.
+
+![Postman - Acceso sin autenticación](docs/evidencias/12-postman-401.png)
+
+**12.2. Acceso con token válido**
+
+Se comprueba el acceso a la API utilizando un token de autenticación válido.
+
+![Postman - Token válido](docs/evidencias/12-postman-token-valido.png)
+
+**12.3. Cierre de sesión mediante la API**
+
+Se comprueba el cierre de sesión mediante una solicitud a la API.
+
+![Postman - Cierre de sesión](docs/evidencias/12-postman-logout.png)
+
+### Evidencia 13. Registros de tareas almacenados en Laravel
+
+![Registros de tareas en Laravel](docs/evidencias/13-registros-laravel.png)
 
 ## 11. Video de demostración
 
