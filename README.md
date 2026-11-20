@@ -408,7 +408,7 @@ Se comprueba el cierre de sesión mediante una solicitud a la API.
 
 En esta sección se incorporará el enlace al video de demostración del proyecto.
 
-**Enlace al video:** Pendiente de incorporar.
+**Enlace al video:** [Ver video de demostración](https://youtu.be/qv4VOKX0XX4)
 
 ## 12. Uso de herramientas de inteligencia artificial
 
